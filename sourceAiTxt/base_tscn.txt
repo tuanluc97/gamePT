@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://64r4yw0end3r"]
+
+[ext_resource type="Script" uid="uid://ogwsq6earvgm" path="res://codeGd/base.gd" id="1_pvqg0"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1vivr"]
+size = Vector2(64, 64)
+
+[node name="base" type="StaticBody2D" unique_id=72635833 groups=["main_base"]]
+script = ExtResource("1_pvqg0")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=755761190 groups=["main_base"]]
+offset_left = -32.0
+offset_top = -32.0
+offset_right = 32.0
+offset_bottom = 32.0
+color = Color(0.16078432, 1, 1, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1371769055]
+shape = SubResource("RectangleShape2D_1vivr")
+
+[node name="SpawnPoint" type="Marker2D" parent="." unique_id=524218976]
+position = Vector2(16, 48)

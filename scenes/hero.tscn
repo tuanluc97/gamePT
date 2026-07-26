@@ -1,0 +1,23 @@
+[gd_scene format=3 uid="uid://hp80np4nvb4g"]
+
+[ext_resource type="Script" uid="uid://6qx87mhufhj0" path="res://codeGd/hero.gd" id="1_3uyx6"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1vivr"]
+size = Vector2(24, 24)
+
+[node name="Hero" type="CharacterBody2D" unique_id=375482881]
+collision_layer = 2
+motion_mode = 1
+script = ExtResource("1_3uyx6")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=411941598]
+offset_left = -12.0
+offset_top = -12.0
+offset_right = 12.0
+offset_bottom = 12.0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1321281109]
+shape = SubResource("RectangleShape2D_1vivr")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1357759336]
+position_smoothing_enabled = true

@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://drfktv65yrdbh"]
+
+[ext_resource type="Script" uid="uid://bf0bioheeg4la" path="res://codeGd/worker.gd" id="1_mj6w4"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1vivr"]
+radius = 4.0
+
+[node name="Worker" type="CharacterBody2D" unique_id=55061251]
+collision_layer = 4
+motion_mode = 1
+script = ExtResource("1_mj6w4")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1294719222]
+shape = SubResource("CircleShape2D_1vivr")
+
+[node name="HarvestTimer" type="Timer" parent="." unique_id=1255050101]
+wait_time = 2.0
+one_shot = true
