@@ -9,7 +9,6 @@
 [ext_resource type="PackedScene" uid="uid://cfgvrlwg5qdbf" path="res://scenes/job_panel.tscn" id="7_272bh"]
 [ext_resource type="PackedScene" uid="uid://b1f8potlpwthw" path="res://scenes/wood_node.tscn" id="8_5vw27"]
 [ext_resource type="Script" uid="uid://dg3io3v1gabfd" path="res://codeGd/grid_map.gd" id="9_kek77"]
-[ext_resource type="PackedScene" uid="uid://dnb8gwsveh7mn" path="res://scenes/wall_foundation.tscn" id="10_4c57u"]
 
 [node name="Main" type="Node2D" unique_id=1789200749]
 script = ExtResource("1_ig7tw")
@@ -36,4 +35,3 @@ position = Vector2(-832, 320)
 
 [node name="GridMap" type="Node2D" parent="." unique_id=1829036063]
 script = ExtResource("9_kek77")
-foundation_scene = ExtResource("10_4c57u")

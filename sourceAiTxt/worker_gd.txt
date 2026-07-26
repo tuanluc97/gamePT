@@ -58,6 +58,8 @@ func _physics_process(delta: float) -> void:
 func request_path(target_pos: Vector2) -> void:
 	if grid_manager:
 		current_path = grid_manager.get_path_for_ant(global_position, target_pos)
+		if current_path.size() == 0:
+			print("[CẢNH BÁO] Kiến không thể tìm đường tới: ", target_pos)
 
 func move_along_path() -> void:
 	if current_path.size() == 0:
@@ -67,7 +69,6 @@ func move_along_path() -> void:
 	var target_point = current_path[0]
 	var dist = global_position.distance_to(target_point)
 	
-	# Hít nam châm vào tâm để bẻ lái mượt
 	if dist < 4.0:
 		global_position = target_point 
 		current_path.pop_front()
@@ -75,6 +76,11 @@ func move_along_path() -> void:
 	else:
 		velocity = global_position.direction_to(target_point) * speed
 		move_and_slide()
+		
+		# Báo lỗi nếu Kiến cạ bụng vào tường
+		if get_slide_collision_count() > 0:
+			var col = get_slide_collision(0).get_collider()
+			if col: print("[CẢNH BÁO] Kiến đang bị kẹt vật lý vào: ", col.name)
 
 func _process_scout_job(_delta: float) -> void:
 	match current_state:
@@ -99,7 +105,7 @@ func _process_gold_miner_job(_delta: float) -> void:
 	match current_state:
 		State.IDLE: find_gold_node()
 		State.MOVING_TO_TARGET:
-			if is_instance_valid(target_gold_node) and global_position.distance_to(target_gold_node.global_position + Vector2(16,16)) < 25.0:
+			if is_instance_valid(target_gold_node) and global_position.distance_to(target_gold_node.global_position) < 35.0:
 				current_path.clear()
 				start_harvesting()
 			else:
@@ -128,7 +134,7 @@ func _process_wood_chopper_job(_delta: float) -> void:
 	match current_state:
 		State.IDLE: find_wood_node()
 		State.MOVING_TO_TARGET:
-			if is_instance_valid(target_wood_node) and global_position.distance_to(target_wood_node.global_position + Vector2(16,16)) < 25.0:
+			if is_instance_valid(target_wood_node) and global_position.distance_to(target_wood_node.global_position) < 35.0:
 				current_path.clear()
 				start_harvesting()
 			else:
@@ -167,7 +173,7 @@ func _process_builder_job(delta: float) -> void:
 				move_along_path()
 				if current_path.size() == 0: current_state = State.IDLE
 		State.MOVING_TO_TARGET:
-			if is_instance_valid(target_foundation) and global_position.distance_to(target_foundation.global_position + Vector2(16,16)) < 25.0:
+			if is_instance_valid(target_foundation) and global_position.distance_to(target_foundation.global_position) < 35.0:
 				current_path.clear()
 				current_state = State.WORKING
 			else:
@@ -227,8 +233,7 @@ func _on_harvest_finished() -> void:
 
 func _return_to_base() -> void:
 	if main_base:
-		var spawn_pt = main_base.get_node_or_null("SpawnPoint")
-		var target_pt = spawn_pt.global_position if spawn_pt else main_base.global_position
+		var target_pt = main_base.global_position
 		request_path(target_pt)
 		current_state = State.RETURNING_TO_BASE
 	else:

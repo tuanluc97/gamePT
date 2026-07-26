@@ -27,6 +27,7 @@ var current_path: Array[Vector2] = []
 
 @onready var harvest_timer: Timer = $HarvestTimer
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
 func _ready() -> void:
 	add_to_group("workers")
 	harvest_timer.timeout.connect(_on_harvest_finished)
@@ -40,14 +41,35 @@ func _ready() -> void:
 	if grids.size() > 0: grid_manager = grids[0]
 		
 	if grid_manager and grid_manager.has_method("get_cell_center"):
+		# Đẩy nhẹ vị trí khởi tạo ra khỏi tâm ô để tránh chồng chéo va chạm vật lý lúc đẻ nhiều con
 		global_position = grid_manager.get_cell_center(global_position)
 		
 	evaluate_job()
+	
+	# BẰNG CHỨNG LOG: Kiểm tra ngay xem sau khi nhận việc, đường đi có bị rỗng không
+	#print("🐜 [PATH CHECK] Nông dân khởi tạo xong Job: ", current_job, " | Path size: ", current_path.size())
 
+# THÊM ĐOẠN NÀY VÀO TRONG HÀM _draw() CỦA FILE worker.gd
 func _draw() -> void:
 	draw_circle(Vector2.ZERO, agent_radius, agent_color)
+	
+	# Hiển thị số lượng tài nguyên đang mang theo
+	var carrying_text = ""
+	var text_color = Color.WHITE
+	if carried_wood > 0:
+		carrying_text = str(carried_wood) + " gỗ"
+		text_color = Color.SADDLE_BROWN
+	elif carried_gold > 0:
+		carrying_text = str(carried_gold) + " vàng"
+		text_color = Color.GOLD
+		
+	if carrying_text != "":
+		draw_string(ThemeDB.fallback_font, Vector2(8, 4), carrying_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, text_color)
 
 func _physics_process(delta: float) -> void:
+	# Yêu cầu Godot cập nhật đồ họa/chữ liên tục
+	queue_redraw() 
+	
 	match current_job:
 		Job.NONE: velocity = Vector2.ZERO
 		Job.GOLD_MINER: _process_gold_miner_job(delta)
@@ -55,12 +77,18 @@ func _physics_process(delta: float) -> void:
 		Job.BUILDER: _process_builder_job(delta)
 		Job.SCOUT: _process_scout_job(delta)
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
 func request_path(target_pos: Vector2) -> void:
 	if grid_manager:
 		current_path = grid_manager.get_path_for_ant(global_position, target_pos)
+		
+		# BẰNG CHỨNG CHUẨN XÁC: Chỉ log ra khi thực sự xin đường mà bị rỗng
 		if current_path.size() == 0:
-			print("[CẢNH BÁO] Kiến không thể tìm đường tới: ", target_pos)
+			print("🚨 [LỖI TÌM ĐƯỜNG] Nông dân tại ", global_position, " KHÔNG THỂ tìm thấy đường đến: ", target_pos)
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
 func move_along_path() -> void:
 	if current_path.size() == 0:
 		velocity = Vector2.ZERO
@@ -77,15 +105,23 @@ func move_along_path() -> void:
 		velocity = global_position.direction_to(target_point) * speed
 		move_and_slide()
 		
-		# Báo lỗi nếu Kiến cạ bụng vào tường
+		# BẢN VÁ LỖI VẬT LÝ: Tự động trượt lách khi bị cạ vào tường
 		if get_slide_collision_count() > 0:
-			var col = get_slide_collision(0).get_collider()
-			if col: print("[CẢNH BÁO] Kiến đang bị kẹt vật lý vào: ", col.name)
+			var collision = get_slide_collision(0)
+			if collision:
+				# Dội ngược lại theo hướng bật nảy (Normal) của bức tường 2 pixel để lách qua
+				global_position += collision.get_normal() * 2.0
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
 func _process_scout_job(_delta: float) -> void:
 	match current_state:
 		State.IDLE:
 			var random_target = global_position + Vector2(randf_range(-1000, 1000), randf_range(-1000, 1000))
+			
+			# FIX BUG 1: Ép mục tiêu không bao giờ được vượt quá viền bản đồ (-1950 đến 1950)
+			random_target.x = clamp(random_target.x, -1950, 1950)
+			random_target.y = clamp(random_target.y, -1950, 1950)
+			
 			request_path(random_target)
 			if current_path.size() > 0: current_state = State.MOVING_TO_TARGET
 		State.MOVING_TO_TARGET:
@@ -159,6 +195,8 @@ func find_wood_node() -> void:
 	else:
 		current_state = State.IDLE
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd (FIX BUG 1)
 func _process_builder_job(delta: float) -> void:
 	match current_state:
 		State.IDLE: find_nearest_foundation()
@@ -167,6 +205,7 @@ func _process_builder_job(delta: float) -> void:
 				current_path.clear()
 				if main_base.has_method("use_resource") and main_base.use_resource("wood", 10):
 					has_wood_for_build = true
+					carried_wood = 10 # <-- ĐÃ SỬA: Nạp 10 gỗ vào tay để chữ hiển thị!
 					current_state = State.IDLE 
 				else: velocity = Vector2.ZERO
 			else:
@@ -181,17 +220,24 @@ func _process_builder_job(delta: float) -> void:
 				if current_path.size() == 0: current_state = State.IDLE
 		State.WORKING:
 			velocity = Vector2.ZERO
-			if is_instance_valid(target_foundation): target_foundation.build(build_speed * delta)
+			if is_instance_valid(target_foundation):
+				target_foundation.build(build_speed * delta)
 			else:
+				# ĐÃ SỬA: Ép kiến phải xả sạch tay và bắt buộc về nhà lấy gỗ tiếp!
 				has_wood_for_build = false
+				carried_wood = 0 
 				current_state = State.IDLE
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
 func find_nearest_foundation() -> void:
 	var nodes = get_tree().get_nodes_in_group("foundations")
 	var valid_foundations: Array[Area2D] = []
+	
 	for n in nodes:
-		if n is Area2D: valid_foundations.append(n as Area2D)
-		elif n.get_parent() is Area2D: valid_foundations.append(n.get_parent() as Area2D)
+		var f = n if n is Area2D else (n.get_parent() if n.get_parent() is Area2D else null)
+		# CHỈ TÌM NHỮNG MÓNG CHƯA CÓ AI NHẬN XÂY
+		if f and "is_wood_assigned" in f and f.is_wood_assigned == false:
+			valid_foundations.append(f)
 			
 	if valid_foundations.size() > 0:
 		var nearest = valid_foundations[0]
@@ -201,10 +247,12 @@ func find_nearest_foundation() -> void:
 			if dist < min_dist:
 				min_dist = dist
 				nearest = f
+				
 		target_foundation = nearest
+		# KHÓA MÓNG LẠI: Đánh dấu đã có thầu, người khác cấm tranh!
+		target_foundation.is_wood_assigned = true 
 		
-		if not has_wood_for_build and not target_foundation.is_wood_assigned:
-			target_foundation.is_wood_assigned = true
+		if not has_wood_for_build:
 			if main_base:
 				var spawn_pt = main_base.get_node_or_null("SpawnPoint")
 				var target_pt = spawn_pt.global_position if spawn_pt else main_base.global_position
@@ -231,10 +279,16 @@ func _on_harvest_finished() -> void:
 	else:
 		current_state = State.IDLE
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
 func _return_to_base() -> void:
 	if main_base:
-		var target_pt = main_base.global_position
+		var spawn_pt = main_base.get_node_or_null("SpawnPoint")
+		var target_pt = spawn_pt.global_position if spawn_pt else main_base.global_position
+		
+		#print("🪵 [BUG 2 DEBUG] Kiến đã chặt xong! Đang xin đường về nhà tại: ", target_pt)
 		request_path(target_pt)
+		#print("🪵 [BUG 2 DEBUG] Mảng đường đi về nhà có độ dài (Path Size): ", current_path.size())
+		
 		current_state = State.RETURNING_TO_BASE
 	else:
 		current_state = State.IDLE

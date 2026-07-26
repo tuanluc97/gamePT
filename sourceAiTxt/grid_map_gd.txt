@@ -1,171 +1,165 @@
-extends CharacterBody2D
+extends Node2D
 
-enum Job { NONE, GOLD_MINER, WOOD_CHOPPER, BUILDER, SCOUT }
-enum State { IDLE, MOVING_TO_TARGET, WORKING, RETURNING_TO_BASE, MOVING_TO_BASE_FOR_WOOD }
+@export var grid_size: float = 32.0
+@export var foundation_scene: PackedScene
 
-@export var current_job: Job = Job.SCOUT
-var current_state: State = State.IDLE
+var is_building_mode: bool = false
+var astar_grid: AStarGrid2D
 
-@export var speed: float = 120.0
-@export var build_speed: float = 12.5 
-var vision_radius: float = 150.0 
+var map_width: int = 500
+var map_height: int = 500
+var offset_x: int = -250
+var offset_y: int = -250
 
-var agent_radius: float = 4.0 
-@export var agent_color: Color = Color.PINK 
-
-var carried_gold: int = 0
-var carried_wood: int = 0
-var has_wood_for_build: bool = false
-
-var target_gold_node: Area2D = null
-var target_wood_node: Area2D = null
-var target_foundation: Area2D = null
-var main_base: Node2D = null
-
-var grid_manager: Node2D = null
-var current_path: Array[Vector2] = []
-
-@onready var harvest_timer: Timer = $HarvestTimer
-
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
 func _ready() -> void:
-	add_to_group("workers")
-	harvest_timer.timeout.connect(_on_harvest_finished)
-	queue_redraw()
+	print(">>> [DEBUG CHECK] Hàm _ready() của GridMap ĐÃ CHẠY! <<<")
+	add_to_group("grid_manager")
 	
+	# In ra tọa độ thế giới của bản thân GridMap
+	print("[DEBUG CHECK] GridMap global_position: ", global_position)
+	
+	_init_astar_grid()
+	call_deferred("_debug_check_objects")
+
+func _debug_check_objects() -> void:
 	var bases = get_tree().get_nodes_in_group("main_base")
-	if bases.size() > 0: main_base = bases[0]
+	if bases.size() > 0:
+		for b in bases:
+			print("[DEBUG CHECK] Tên node Base: ", b.name)
+			print("[DEBUG CHECK] Tọa độ global_position của Base: ", b.global_position)
+	else:
+		print("[DEBUG CHECK CẢNH BÁO] Không tìm thấy Node nào trong group 'main_base'!")
+# CHỈ THÊM/SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
+func _auto_align_and_block() -> void:
+	print("--- [DEBUG BUG 1] BẮT ĐẦU KIỂM TRA TỌA ĐỘ ---")
+	for b in get_tree().get_nodes_in_group("main_base"):
+		var raw_pos = b.global_position
+		var cell = local_to_map(raw_pos)
+		var snapped_pos = Vector2(cell.x * grid_size, cell.y * grid_size)
 		
-	await get_tree().physics_frame
-	var grids = get_tree().get_nodes_in_group("grid_manager")
-	if grids.size() > 0: grid_manager = grids[0]
+		print("1. Tọa độ thực tế (Global Position) của Nhà chính: ", raw_pos)
+		print("2. Ô lưới (Local to Map) mà nó đang đứng: ", cell)
+		print("3. Tọa độ tính toán theo góc ô lưới (Snap): ", snapped_pos)
 		
-	print("\n[WORKER] Nông dân mới sinh ra tại (Chưa hít lưới): ", global_position)
-	if grid_manager and grid_manager.has_method("get_cell_center"):
-		global_position = grid_manager.get_cell_center(global_position)
-		print("[WORKER] Nông dân ĐÃ hít vào TÂM lưới: ", global_position)
-		
-	evaluate_job()
+		# Gán lại vị trí để ép nhà chính khớp vào góc ô lưới
+		b.global_position = snapped_pos
+func _init_astar_grid() -> void:
+	astar_grid = AStarGrid2D.new()
+	astar_grid.cell_size = Vector2(grid_size, grid_size)
+	astar_grid.region = Rect2i(offset_x, offset_y, map_width, map_height) 
+	astar_grid.offset = Vector2.ZERO 
+	astar_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
+	astar_grid.update()
 
+# --- HÀM DEBUG TỌA ĐỘ ---
+func _debug_check_base_position() -> void:
+	var bases = get_tree().get_nodes_in_group("main_base")
+	if bases.size() > 0:
+		for b in bases:
+			print("[DEBUG] Tìm thấy main_base: ", b.name, " tại Pixel gốc: ", b.global_position)
+			
+			# Tự động gỡ lỗi "Nhân đôi Base" nếu người dùng quên xóa group ở ColorRect
+			if not b is StaticBody2D:
+				print("[CẢNH BÁO MÀU ĐỎ] Node '", b.name, "' không phải là StaticBody2D (có thể là ColorRect). Hãy gỡ nó khỏi group 'main_base'!")
+			else:
+				var cell = local_to_map(b.global_position)
+				print("[DEBUG] AStar nhận diện Nhà chính nằm ở Ô Lưới (Cell): ", cell)
+	else:
+		print("[LỖI] Không tìm thấy Nhà chính trong group 'main_base'")
+
+	var resources = get_tree().get_nodes_in_group("hidden_resources")
+	if resources.size() > 0:
+		print("[DEBUG] Mỏ tài nguyên đầu tiên nằm ở: ", resources[0].global_position)
+
+# --- VẼ GIAO DIỆN DEBUG ---
+# CHỈ THAY THẾ ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
 func _draw() -> void:
-	draw_circle(Vector2.ZERO, agent_radius, agent_color)
-
-func _physics_process(delta: float) -> void:
-	match current_job:
-		Job.NONE: velocity = Vector2.ZERO
-		Job.GOLD_MINER: _process_gold_miner_job(delta)
-		Job.WOOD_CHOPPER: _process_wood_chopper_job(delta)
-		Job.BUILDER: _process_builder_job(delta)
-		Job.SCOUT: _process_scout_job(delta)
-
-func request_path(target_pos: Vector2) -> void:
-	if grid_manager:
-		current_path = grid_manager.get_path_for_ant(global_position, target_pos)
-		
-		# DEBUG: In ra mảng đường đi
-		if current_path.size() == 0:
-			print(">>> [WORKER CẢNH BÁO] Hệ thống A* trả về ĐƯỜNG ĐI RỖNG từ ", global_position, " đến ", target_pos)
-		
-		if current_path.size() > 0 and global_position.distance_to(current_path[0]) < 2.0:
-			current_path.pop_front()
-
-func move_along_path() -> void:
-	if current_path.size() == 0:
-		velocity = Vector2.ZERO
-		return
-		
-	var target_point = current_path[0]
-	var dist = global_position.distance_to(target_point)
+	var color = Color(1.0, 1.0, 1.0, 0.4) 
+	var draw_limit = 500 
 	
-	if dist < 4.0:
-		global_position = target_point 
-		current_path.pop_front()
-		velocity = Vector2.ZERO
-	else:
-		velocity = global_position.direction_to(target_point) * speed
-		move_and_slide()
+	print("\n--- [DEBUG GRID] BẮT ĐẦU VẼ LƯỚI ---")
+	
+	# In log các mốc tọa độ đường kẻ dọc xung quanh khu vực Nhà chính (từ 192 đến 448)
+	for x in range(192, 450, int(grid_size)):
+		draw_line(Vector2(x, -draw_limit), Vector2(x, draw_limit), color, 1.0)
+		
+	for y in range(192, 450, int(grid_size)):
+		draw_line(Vector2(-draw_limit, y), Vector2(draw_limit, y), color, 1.0)
 
-# --- CHỈ GIỮ LẠI LOGIC SCOUT & VÀNG ĐỂ TEST CHUYÊN SÂU ---
-func _process_scout_job(_delta: float) -> void:
-	match current_state:
-		State.IDLE:
-			var random_target = global_position + Vector2(randf_range(-1000, 1000), randf_range(-1000, 1000))
-			request_path(random_target)
-			if current_path.size() > 0: current_state = State.MOVING_TO_TARGET
-		State.MOVING_TO_TARGET:
-			move_along_path()
-			_scan_for_resources()
-			if current_path.size() == 0: current_state = State.IDLE
-		_:
-			current_state = State.IDLE
+	# In log ranh giới hình ảnh thực tế của Nhà chính để đối chiếu với lưới
+	for b in get_tree().get_nodes_in_group("main_base"):
+		var left_edge = b.global_position.x - 32.0
+		var right_edge = b.global_position.x + 32.0
+		draw_circle(b.global_position, 5.0, Color.RED)
 
-func _scan_for_resources() -> void:
-	var hidden_nodes = get_tree().get_nodes_in_group("hidden_resources")
-	for node in hidden_nodes:
-		if is_instance_valid(node) and global_position.distance_to(node.global_position) < vision_radius:
-			if node.has_method("discover"): node.discover()
+# ====================================================================
+# CÁC HÀM CỐT LÕI (BẮT BUỘC PHẢI CÓ)
+# ====================================================================
 
-func _process_gold_miner_job(_delta: float) -> void:
-	match current_state:
-		State.IDLE: find_gold_node()
-		State.MOVING_TO_TARGET:
-			if is_instance_valid(target_gold_node) and global_position.distance_to(target_gold_node.global_position) < 35.0:
-				current_path.clear()
-				start_harvesting()
-			else:
-				move_along_path()
-				if current_path.size() == 0: current_state = State.IDLE
-		State.WORKING: velocity = Vector2.ZERO
-		State.RETURNING_TO_BASE:
-			if main_base and global_position.distance_to(main_base.global_position) < 60.0:
-				current_path.clear()
-				deposit_resources()
-			else:
-				move_along_path()
-				if current_path.size() == 0: current_state = State.IDLE
+# Chuyển đổi Pixel sang Ô Lưới
+func local_to_map(pos: Vector2) -> Vector2i:
+	return Vector2i(floor(pos.x / grid_size), floor(pos.y / grid_size))
 
-func find_gold_node() -> void:
-	var nodes = get_tree().get_nodes_in_group("gold_nodes")
-	if nodes.size() > 0:
-		target_gold_node = nodes[0] as Area2D
-		if target_gold_node:
-			# Debug
-			print("[WORKER] Đang xin đường tới MỎ VÀNG tại ", target_gold_node.global_position)
-			request_path(target_gold_node.global_position)
-			current_state = State.MOVING_TO_TARGET
-	else:
-		current_state = State.IDLE
+# Trả về tọa độ chính GIỮA lòng ô vuông lưới (Dành cho Kiến)
+func get_cell_center(pos: Vector2) -> Vector2:
+	var cell = local_to_map(pos)
+	return Vector2(cell.x * grid_size + grid_size / 2.0, cell.y * grid_size + grid_size / 2.0)
 
-# --- CÁC HÀM KHÁC GIỮ NGUYÊN HOẶC CHƯA DÙNG TỚI ĐỂ TRÁNH QUÁ TẢI CODE ---
-func _process_wood_chopper_job(_delta: float) -> void: pass
-func _process_builder_job(_delta: float) -> void: pass
-func start_harvesting() -> void: 
-	current_state = State.WORKING
-	velocity = Vector2.ZERO
-	harvest_timer.start()
-func _on_harvest_finished() -> void: 
-	if current_job == Job.GOLD_MINER and is_instance_valid(target_gold_node):
-		if target_gold_node.has_method("harvest"): carried_gold = target_gold_node.harvest(10)
-		_return_to_base()
-	else: current_state = State.IDLE
-func _return_to_base() -> void: 
-	if main_base:
-		var target_pt = main_base.global_position
-		request_path(target_pt)
-		current_state = State.RETURNING_TO_BASE
-func deposit_resources() -> void:
-	if main_base and main_base.has_method("add_resource"):
-		if carried_gold > 0:
-			main_base.add_resource("gold", carried_gold)
-			carried_gold = 0
-	current_state = State.IDLE
-func set_job(new_job: Job) -> void:
-	current_job = new_job
-	match new_job:
-		Job.SCOUT: agent_color = Color.PINK
-		_: agent_color = Color.GREEN
-	queue_redraw() 
-	current_state = State.IDLE
-	evaluate_job()
-func evaluate_job() -> void:
-	current_state = State.IDLE
-	if current_job == Job.GOLD_MINER: find_gold_node()
+# Hàm tìm đường A*
+func get_path_for_ant(start_pos: Vector2, target_pos: Vector2) -> Array[Vector2]:
+	var start_cell = local_to_map(start_pos)
+	var target_cell = local_to_map(target_pos)
+	
+	start_cell.x = clamp(start_cell.x, offset_x, offset_x + map_width - 1)
+	start_cell.y = clamp(start_cell.y, offset_y, offset_y + map_height - 1)
+	target_cell.x = clamp(target_cell.x, offset_x, offset_x + map_width - 1)
+	target_cell.y = clamp(target_cell.y, offset_y, offset_y + map_height - 1)
+	
+	var path_cells = astar_grid.get_id_path(start_cell, target_cell)
+	var path_positions: Array[Vector2] = []
+	for cell in path_cells:
+		path_positions.append(Vector2(cell.x * grid_size + grid_size / 2.0, cell.y * grid_size + grid_size / 2.0))
+	return path_positions
+
+func update_wall_obstacle(global_pos: Vector2, is_solid: bool) -> void:
+	astar_grid.set_point_solid(local_to_map(global_pos), is_solid)
+
+# CHỈ THAY THẾ ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_B:
+		is_building_mode = !is_building_mode
+		print("👉 [XÂY DỰNG] Trạng thái chế độ xây: ", is_building_mode)
+
+	if is_building_mode and event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			place_foundation_at_mouse()
+
+# THÊM HÀM NÀY VÀO FILE grid_map.gd
+func place_foundation_at_mouse() -> void:
+	if foundation_scene == null:
+		print("👉 [LỖI XÂY DỰNG] Chưa gán foundation_scene trong Inspector của GridMap!")
+		return
+
+	var mouse_pos = get_global_mouse_position()
+	var grid_pos = get_cell_center(mouse_pos)
+	
+	print("👉 [XÂY DỰNG] Đang thử đặt móng tại tọa độ: ", grid_pos)
+	
+	if is_tile_occupied(grid_pos):
+		print("👉 [XÂY DỰNG] Ô này đã có vật cản, không thể xây!")
+		return
+
+	var foundation = foundation_scene.instantiate()
+	foundation.global_position = grid_pos
+	get_parent().add_child(foundation)
+	update_wall_obstacle(grid_pos, true)
+	print("👉 [XÂY DỰNG] Đặt móng thành công tại: ", grid_pos)
+
+# THÊM HÀM NÀY VÀO CUỐI FILE grid_map.gd
+func is_tile_occupied(pos: Vector2) -> bool:
+	for f in get_tree().get_nodes_in_group("foundations"):
+		if f.global_position.distance_to(pos) < 5.0: return true
+	for w in get_tree().get_nodes_in_group("walls"):
+		if w.global_position.distance_to(pos) < 5.0: return true
+	return false
