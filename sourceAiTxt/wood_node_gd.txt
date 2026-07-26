@@ -20,7 +20,7 @@ func discover() -> void:
 		show() # Hiện hình
 		remove_from_group("hidden_resources")
 		add_to_group("wood_nodes") # Báo cho thợ mỏ biết!
-		print("🗺️ Trinh sát đã phát hiện một Mỏ Vàng!")
+		print("🗺️ Trinh sát đã phát hiện một Mỏ Gỗ!")
 
 func harvest(amount: int) -> int:
 	var actual_harvested = min(amount, current_wood)
@@ -28,3 +28,15 @@ func harvest(amount: int) -> int:
 	if current_wood <= 0:
 		queue_free() 
 	return actual_harvested
+	
+# THÊM/SỬA 2 HÀM NÀY VÀO FILE wood_node.gd
+func _process(_delta: float) -> void:
+	# Yêu cầu Godot vẽ lại số gỗ liên tục mỗi khung hình
+	queue_redraw()
+
+func _draw() -> void:
+	# Chỉ vẽ số khi mỏ đã được Trinh sát phát hiện (không bị hide) và còn gỗ
+	if visible and "current_wood" in self and current_wood > 0:
+		var text = str(current_wood) + " Gỗ"
+		# Vẽ chữ lùi xuống dưới mỏ (Tọa độ Y = 45)
+		draw_string(ThemeDB.fallback_font, Vector2(0, 45), text, HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color.WHITE)

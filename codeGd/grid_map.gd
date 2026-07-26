@@ -2,6 +2,7 @@ extends Node2D
 
 @export var grid_size: float = 32.0
 @export var foundation_scene: PackedScene
+@export var wood_node_scene: PackedScene
 
 var is_building_mode: bool = false
 var astar_grid: AStarGrid2D
@@ -12,13 +13,17 @@ var offset_x: int = -250
 var offset_y: int = -250
 
 # CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
 func _ready() -> void:
 	add_to_group("grid_manager")
-	global_position = Vector2.ZERO
+	global_position = Vector2.ZERO 
 	
 	_init_astar_grid()
 	call_deferred("_auto_align_and_block")
-	_create_world_boundaries() # Gọi hàm sinh Tường vật lý
+	_create_world_boundaries() 
+	
+	# Gọi hàm sinh mỏ gỗ ngẫu nhiên (Ví dụ sinh 20 mỏ rải rác)
+	call_deferred("_spawn_random_wood_nodes", 20)
 	queue_redraw()
 # CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
 func _create_world_boundaries() -> void:
@@ -203,3 +208,92 @@ func is_tile_occupied(pos: Vector2) -> bool:
 	for w in get_tree().get_nodes_in_group("walls"):
 		if w.global_position.distance_to(pos) < 5.0: return true
 	return false
+# THÊM 2 HÀM NÀY VÀO CUỐI FILE grid_map.gd
+
+# 1. Hàm tính tổng số lượng gỗ hiện còn trên tất cả các mỏ gỗ trên bản đồ
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
+func _get_total_wood_on_map() -> int:
+	var total_wood = 0
+	# Gộp danh sách cả mỏ đã hiện (wood_nodes) và mỏ đang ẩn sương mù (hidden_resources)
+	var all_nodes = get_tree().get_nodes_in_group("wood_nodes") + get_tree().get_nodes_in_group("hidden_resources")
+	
+	for node in all_nodes:
+		if is_instance_valid(node) and "current_wood" in node:
+			total_wood += node.current_wood
+			
+	return total_wood
+
+# THAY THẾ HOẶC THÊM HÀM NÀY TRONG FILE grid_map.gd
+var wood_check_timer: float = 0.0
+
+func _process(delta: float) -> void:
+	wood_check_timer += delta
+	if wood_check_timer >= 2.0: # Kiểm tra định kỳ mỗi 2 giây
+		wood_check_timer = 0.0
+		_maintain_wood_supply()
+# 2. Hàm tự động kiểm tra điều kiện và sinh mỏ gỗ mới
+func _maintain_wood_supply() -> void:
+	if wood_node_scene == null: return
+	
+	var current_total = _get_total_wood_on_map()
+	var max_cap = 500 # Giới hạn tối đa 500 gỗ trên bản đồ
+	
+	# Nếu tổng lượng gỗ trên bản đồ đang nhỏ hơn 500
+	if current_total < max_cap:
+		var deficit = max_cap - current_total # Số gỗ còn thiếu
+		
+		# Chỉ sinh mỏ mới nếu số gỗ thiếu >= 30 (đủ cho 1 mỏ nhỏ)
+		if deficit >= 30:
+			# Lựa chọn ngẫu nhiên vị trí trong khung viền bản đồ (-1900 đến 1900)
+			var rand_pos = Vector2(randf_range(-1900, 1900), randf_range(-1900, 1900))
+			rand_pos = get_cell_center(rand_pos)
+			var cell = local_to_map(rand_pos)
+			
+			# Ô đất phải trống (chưa có vật cản)
+			if not astar_grid.is_point_solid(cell):
+				var wood = wood_node_scene.instantiate()
+				wood.global_position = rand_pos
+				
+				# Sinh giá trị ngẫu nhiên từ 30 đến 50 gỗ (nhưng không vượt quá số gỗ thiếu)
+				var rand_val = min(randi_range(30, 50), deficit)
+				wood.set("max_wood", rand_val)
+				wood.set("current_wood", rand_val)
+				
+				get_parent().add_child(wood)
+				update_wall_obstacle(rand_pos, true)
+				
+				# LOG BẰNG CHỨNG: In ra mỗi khi mỏ mới xuất hiện thành công
+				print("🌲 [TÀI NGUYÊN] Đã sinh mỏ gỗ mới (+", rand_val, " gỗ) tại: ", rand_pos, " | Tổng gỗ toàn map hiện tại: ", _get_total_wood_on_map(), "/", max_cap)
+				
+# THÊM HÀM NÀY VÀO CUỐI FILE grid_map.gd
+func _spawn_random_wood_nodes(count: int) -> void:
+	if wood_node_scene == null:
+		print("🚨 [LỖI] Chưa kéo thả file 'wood_node.tscn' vào GridMap trong Inspector!")
+		return
+		
+	var spawned = 0
+	# Lặp dư ra chút đỉnh để lỡ trúng ô bị kẹt thì tìm ô khác
+	for i in range(count * 2): 
+		if spawned >= count: break
+		
+		# Sinh tọa độ an toàn trong vùng viền map (-1900 đến 1900)
+		var rand_pos = Vector2(randf_range(-1900, 1900), randf_range(-1900, 1900))
+		rand_pos = get_cell_center(rand_pos)
+		var cell = local_to_map(rand_pos)
+		
+		# Chỉ sinh mỏ gỗ nếu ô đất đó đang KHÔNG bị vật cản khác đè lên
+		if not astar_grid.is_point_solid(cell):
+			var wood = wood_node_scene.instantiate()
+			wood.global_position = rand_pos
+			
+			# Thiết lập ngẫu nhiên lượng gỗ từ 30 đến 50
+			var rand_val = randi_range(30, 50)
+			wood.set("max_wood", rand_val)
+			wood.set("current_wood", rand_val)
+			
+			get_parent().add_child(wood)
+			# Khóa ô lưới lại để Kiến không đi xuyên ngang qua mỏ gỗ
+			update_wall_obstacle(rand_pos, true)
+			spawned += 1
+			
+	print("🌲 [TÀI NGUYÊN] Đã rải thành công ", spawned, " mỏ gỗ trên bản đồ!")				

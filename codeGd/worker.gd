@@ -196,18 +196,30 @@ func find_wood_node() -> void:
 		current_state = State.IDLE
 
 # CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
-# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd (FIX BUG 1)
 func _process_builder_job(delta: float) -> void:
 	match current_state:
-		State.IDLE: find_nearest_foundation()
+		State.IDLE:
+			find_nearest_foundation()
 		State.MOVING_TO_BASE_FOR_WOOD:
 			if main_base and global_position.distance_to(main_base.global_position) < 60.0:
 				current_path.clear()
 				if main_base.has_method("use_resource") and main_base.use_resource("wood", 10):
 					has_wood_for_build = true
-					carried_wood = 10 # <-- ĐÃ SỬA: Nạp 10 gỗ vào tay để chữ hiển thị!
-					current_state = State.IDLE 
-				else: velocity = Vector2.ZERO
+					carried_wood = 10
+					
+					# BẰNG CHỨNG LOG: Kiểm tra xem kiến có nhớ công trường không
+					print("🔨 [STATE LOG] Kiến lấy gỗ xong! Móng nhà đã khóa: ", target_foundation)
+					
+					# NẾU ĐÃ CÓ MÓNG TỪ TRƯỚC -> ĐI XÂY LUÔN, KHÔNG VỀ IDLE!
+					if is_instance_valid(target_foundation):
+						print("   -> Phi thẳng ra công trường thay vì đứng chơi!")
+						request_path(target_foundation.global_position)
+						current_state = State.MOVING_TO_TARGET
+					else:
+						print("   -> Móng đã biến mất, đi tìm việc khác!")
+						current_state = State.IDLE 
+				else:
+					velocity = Vector2.ZERO
 			else:
 				move_along_path()
 				if current_path.size() == 0: current_state = State.IDLE
@@ -223,9 +235,8 @@ func _process_builder_job(delta: float) -> void:
 			if is_instance_valid(target_foundation):
 				target_foundation.build(build_speed * delta)
 			else:
-				# ĐÃ SỬA: Ép kiến phải xả sạch tay và bắt buộc về nhà lấy gỗ tiếp!
 				has_wood_for_build = false
-				carried_wood = 0 
+				carried_wood = 0
 				current_state = State.IDLE
 
 # CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
@@ -269,13 +280,19 @@ func start_harvesting() -> void:
 	velocity = Vector2.ZERO
 	harvest_timer.start()
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
 func _on_harvest_finished() -> void:
 	if current_job == Job.GOLD_MINER and is_instance_valid(target_gold_node):
-		if target_gold_node.has_method("harvest"): carried_gold = target_gold_node.harvest(10)
+		if target_gold_node.has_method("harvest"):
+			carried_gold = target_gold_node.harvest(1) # SỬA: Chỉ lấy 1 vàng
 		_return_to_base()
+		
 	elif current_job == Job.WOOD_CHOPPER and is_instance_valid(target_wood_node):
-		if target_wood_node.has_method("harvest"): carried_wood = target_wood_node.harvest(10)
+		if target_wood_node.has_method("harvest"):
+			carried_wood = target_wood_node.harvest(1) # SỬA: Chỉ lấy 1 gỗ
+			print("🪵 [THU HOẠCH] Nông dân đã lấy ", carried_wood, " tài nguyên. Đang mang về!")
 		_return_to_base()
+		
 	else:
 		current_state = State.IDLE
 

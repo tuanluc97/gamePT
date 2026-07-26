@@ -8,7 +8,7 @@ size = Vector2(64, 64)
 [node name="base" type="StaticBody2D" unique_id=72635833 groups=["main_base"]]
 script = ExtResource("1_pvqg0")
 
-[node name="ColorRect" type="ColorRect" parent="." unique_id=755761190 groups=["main_base"]]
+[node name="ColorRect" type="ColorRect" parent="." unique_id=755761190]
 offset_left = -32.0
 offset_top = -32.0
 offset_right = 32.0

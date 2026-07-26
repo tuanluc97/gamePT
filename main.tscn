@@ -37,3 +37,4 @@ position = Vector2(-832, 320)
 [node name="GridMap" type="Node2D" parent="." unique_id=1829036063]
 script = ExtResource("9_kek77")
 foundation_scene = ExtResource("10_4c57u")
+wood_node_scene = ExtResource("8_5vw27")

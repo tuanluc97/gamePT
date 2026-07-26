@@ -18,6 +18,7 @@ script = ExtResource("1_ig7tw")
 position = Vector2(192, 64)
 
 [node name="base" parent="." unique_id=72635833 instance=ExtResource("3_lquwl")]
+position = Vector2(320, 320)
 worker_scene = ExtResource("4_7mycd")
 
 [node name="GoldNode" parent="." unique_id=349051506 instance=ExtResource("5_272bh")]
@@ -36,3 +37,4 @@ position = Vector2(-832, 320)
 [node name="GridMap" type="Node2D" parent="." unique_id=1829036063]
 script = ExtResource("9_kek77")
 foundation_scene = ExtResource("10_4c57u")
+wood_node_scene = ExtResource("8_5vw27")

@@ -7,9 +7,20 @@ extends CanvasLayer
 var pos_label: Label = null
 var hero_node: Node2D = null
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE hud.gd
 func _ready() -> void:
 	await get_tree().physics_frame
 	_create_pos_label()
+	
+	# Kết nối tín hiệu đồng bộ Vàng và Gỗ từ Nhà chính lên UI
+	var bases = get_tree().get_nodes_in_group("main_base")
+	if bases.size() > 0:
+		var base = bases[0]
+		if not base.gold_changed.is_connected(_on_gold_changed):
+			base.gold_changed.connect(_on_gold_changed)
+		if not base.wood_changed.is_connected(_on_wood_changed):
+			base.wood_changed.connect(_on_wood_changed)
+		print("✅ [HUD] Đã kết nối đồng bộ Vàng và Gỗ với Nhà chính thành công!")
 
 func _create_pos_label() -> void:
 	pos_label = Label.new()
