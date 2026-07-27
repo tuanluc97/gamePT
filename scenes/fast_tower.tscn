@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://8oc43nu2h226"]
+
+[ext_resource type="Script" uid="uid://dtyef22a18tfh" path="res://codeGd/fast_tower.gd" id="1_tkgiv"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_xtebo"]
+size = Vector2(32, 32)
+
+[node name="FastTower" type="StaticBody2D" unique_id=1866788224]
+script = ExtResource("1_tkgiv")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=233105638]
+shape = SubResource("RectangleShape2D_xtebo")
+
+[node name="FireTimer" type="Timer" parent="." unique_id=166928312]

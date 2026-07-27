@@ -166,25 +166,58 @@ func find_gold_node() -> void:
 	else:
 		current_state = State.IDLE
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
 func _process_wood_chopper_job(_delta: float) -> void:
 	match current_state:
-		State.IDLE: find_wood_node()
+		State.IDLE:
+			var nodes = get_tree().get_nodes_in_group("wood_nodes")
+			var nearest_node = null
+			var min_dist = INF
+			
+			# FIX BUG 1: Quét tất cả mỏ gỗ, so sánh khoảng cách để lấy mỏ gần nhất
+			for node in nodes:
+				if is_instance_valid(node) and "current_wood" in node and node.current_wood > 0:
+					var dist = global_position.distance_to(node.global_position)
+					if dist < min_dist:
+						min_dist = dist
+						nearest_node = node
+						
+			if nearest_node:
+				target_wood_node = nearest_node
+				# BẰNG CHỨNG LOG: Báo cáo chính xác mỏ nào được chốt và cách bao xa
+				#print("🪓 [AI GỖ] Kiến chốt mỏ gần nhất tại: ", nearest_node.global_position, " | Khoảng cách: ", min_dist)
+				request_path(target_wood_node.global_position)
+				current_state = State.MOVING_TO_TARGET
+			else:
+				target_wood_node = null
+				
 		State.MOVING_TO_TARGET:
-			if is_instance_valid(target_wood_node) and global_position.distance_to(target_wood_node.global_position) < 35.0:
+			# NẾU mỏ gỗ mục tiêu đột nhiên bốc hơi (bị con khác chặt hết) -> Quay về IDLE tìm mỏ mới
+			if not is_instance_valid(target_wood_node):
+				#print("🚨 [AI GỖ] Mỏ gỗ mục tiêu đã cạn/biến mất! Chuyển hướng tìm mỏ khác...")
+				current_path.clear()
+				current_state = State.IDLE
+				return
+				
+			if global_position.distance_to(target_wood_node.global_position) < 35.0:
 				current_path.clear()
 				start_harvesting()
 			else:
 				move_along_path()
 				if current_path.size() == 0: current_state = State.IDLE
-		State.WORKING: velocity = Vector2.ZERO
+				
+		State.WORKING:
+			if not is_instance_valid(target_wood_node):
+				harvest_timer.stop()
+				current_state = State.IDLE
+				
 		State.RETURNING_TO_BASE:
-			if main_base and global_position.distance_to(main_base.global_position) < 60.0:
+			if main_base and global_position.distance_to(main_base.global_position) < 75.0:
 				current_path.clear()
 				deposit_resources()
 			else:
 				move_along_path()
 				if current_path.size() == 0: current_state = State.IDLE
-
 func find_wood_node() -> void:
 	var nodes = get_tree().get_nodes_in_group("wood_nodes")
 	if nodes.size() > 0:
@@ -196,40 +229,48 @@ func find_wood_node() -> void:
 		current_state = State.IDLE
 
 # CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
 func _process_builder_job(delta: float) -> void:
 	match current_state:
 		State.IDLE:
 			find_nearest_foundation()
 		State.MOVING_TO_BASE_FOR_WOOD:
-			if main_base and global_position.distance_to(main_base.global_position) < 60.0:
+			# ĐÃ SỬA: Tăng khoảng cách lên 75.0 để bao trùm được các góc chéo của Nhà chính
+			if main_base and global_position.distance_to(main_base.global_position) < 75.0:
 				current_path.clear()
 				if main_base.has_method("use_resource") and main_base.use_resource("wood", 10):
 					has_wood_for_build = true
 					carried_wood = 10
-					
-					# BẰNG CHỨNG LOG: Kiểm tra xem kiến có nhớ công trường không
-					print("🔨 [STATE LOG] Kiến lấy gỗ xong! Móng nhà đã khóa: ", target_foundation)
-					
-					# NẾU ĐÃ CÓ MÓNG TỪ TRƯỚC -> ĐI XÂY LUÔN, KHÔNG VỀ IDLE!
 					if is_instance_valid(target_foundation):
-						print("   -> Phi thẳng ra công trường thay vì đứng chơi!")
 						request_path(target_foundation.global_position)
 						current_state = State.MOVING_TO_TARGET
 					else:
-						print("   -> Móng đã biến mất, đi tìm việc khác!")
-						current_state = State.IDLE 
+						current_state = State.IDLE
 				else:
 					velocity = Vector2.ZERO
 			else:
 				move_along_path()
-				if current_path.size() == 0: current_state = State.IDLE
+				if current_path.size() == 0:
+					# BẰNG CHỨNG LOG & FIX: Bỏ cuộc vì kẹt đường thì PHẢI nhả móng ra cho con khác làm!
+					print("🚨 [LỖI BUILDER] Hủy lấy gỗ vì không tới được Base! Nhả móng: ", target_foundation)
+					if is_instance_valid(target_foundation):
+						target_foundation.is_wood_assigned = false
+						target_foundation = null
+					current_state = State.IDLE
+					
 		State.MOVING_TO_TARGET:
 			if is_instance_valid(target_foundation) and global_position.distance_to(target_foundation.global_position) < 35.0:
 				current_path.clear()
 				current_state = State.WORKING
 			else:
 				move_along_path()
-				if current_path.size() == 0: current_state = State.IDLE
+				if current_path.size() == 0:
+					print("🚨 [LỖI BUILDER] Kẹt đường đến móng nhà! Nhả móng: ", target_foundation)
+					if is_instance_valid(target_foundation):
+						target_foundation.is_wood_assigned = false
+						target_foundation = null
+					current_state = State.IDLE
+					
 		State.WORKING:
 			velocity = Vector2.ZERO
 			if is_instance_valid(target_foundation):

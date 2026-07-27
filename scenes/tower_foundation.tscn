@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://cfmk6gb17esam"]
+
+[ext_resource type="Script" uid="uid://dh0uc3yyqibsq" path="res://codeGd/wall_foundation.gd" id="1_ahwq3"]
+[ext_resource type="PackedScene" uid="uid://8oc43nu2h226" path="res://scenes/fast_tower.tscn" id="2_ahwq3"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1vivr"]
+size = Vector2(32, 32)
+
+[node name="TowerFoundation" type="Area2D" unique_id=900119582 groups=["foundations"]]
+script = ExtResource("1_ahwq3")
+real_wall_scene = ExtResource("2_ahwq3")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=416892017]
+offset_left = -16.0
+offset_top = -16.0
+offset_right = 16.0
+offset_bottom = 16.0
+color = Color(0.2524501, 0.61097574, 0.7610866, 0.44705883)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1831187189]
+shape = SubResource("RectangleShape2D_1vivr")
+
+[node name="ProgressBar" type="ProgressBar" parent="." unique_id=861946909]
+offset_left = -16.0
+offset_top = 18.0
+offset_right = 16.0
+offset_bottom = 22.0
+show_percentage = false

@@ -1,0 +1,46 @@
+[gd_scene format=3 uid="uid://7nqjpmo51lb"]
+
+[ext_resource type="Script" uid="uid://bw75kxf4qk56d" path="res://codeGd/menu.gd" id="1_yqeox"]
+
+[node name="Menu" type="Control" unique_id=1262919634]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_yqeox")
+
+[node name="StartButton" type="Button" parent="." unique_id=1235550198]
+layout_mode = 0
+offset_left = 9.0
+offset_top = -7.0
+offset_right = 77.0
+offset_bottom = 24.0
+text = "Bắt đầu"
+
+[node name="SettingsButton" type="Button" parent="." unique_id=1502189892]
+layout_mode = 0
+offset_left = -4.0
+offset_top = 42.0
+offset_right = 79.0
+offset_bottom = 73.0
+text = "Tùy chỉnh"
+
+[node name="Panel" type="Panel" parent="." unique_id=670779153]
+layout_mode = 0
+offset_left = -5.0
+offset_top = 37.0
+offset_right = 35.0
+offset_bottom = 77.0
+
+[node name="HSlider" type="HSlider" parent="Panel" unique_id=537317177]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 16.0

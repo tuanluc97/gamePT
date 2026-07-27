@@ -1,9 +1,12 @@
 extends Node2D
 
 @export var grid_size: float = 32.0
-@export var foundation_scene: PackedScene
+@export var wall_foundation_scene: PackedScene  # Móng Tường
+@export var tower_foundation_scene: PackedScene # Móng Tháp
+@export var trap_foundation_scene: PackedScene  # Móng Bẫy
 @export var wood_node_scene: PackedScene
 
+var current_selected_foundation: PackedScene = null # Công trình đang được chọn để xây
 var is_building_mode: bool = false
 var astar_grid: AStarGrid2D
 
@@ -25,6 +28,7 @@ func _ready() -> void:
 	# Gọi hàm sinh mỏ gỗ ngẫu nhiên (Ví dụ sinh 20 mỏ rải rác)
 	call_deferred("_spawn_random_wood_nodes", 20)
 	queue_redraw()
+	select_building_type("tower")
 # CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
 func _create_world_boundaries() -> void:
 	var bounds = StaticBody2D.new()
@@ -47,7 +51,7 @@ func _debug_check_objects() -> void:
 	if bases.size() > 0:
 		for b in bases:
 			print("[DEBUG CHECK] Tên node Base: ", b.name)
-			print("[DEBUG CHECK] Tọa độ global_position của Base: ", b.global_position)
+			#print("[DEBUG CHECK] Tọa độ global_position của Base: ", b.global_position)
 	else:
 		print("[DEBUG CHECK CẢNH BÁO] Không tìm thấy Node nào trong group 'main_base'!")
 # CHỈ THÊM/SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
@@ -171,36 +175,38 @@ func update_wall_obstacle(global_pos: Vector2, is_solid: bool) -> void:
 	astar_grid.set_point_solid(local_to_map(global_pos), is_solid)
 
 # CHỈ THAY THẾ ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
+# THÊM/SỬA HÀM NÀY TRONG FILE grid_map.gd
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_B:
-		is_building_mode = !is_building_mode
-		print("👉 [XÂY DỰNG] Trạng thái chế độ xây: ", is_building_mode)
-
 	if is_building_mode and event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			# Đặt móng khi click chuột trái
 			place_foundation_at_mouse()
-
+			
+		elif event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+			# Chuột phải để thoát chế độ xây dựng
+			is_building_mode = false
+			current_selected_foundation = null
+			print("👉 [XÂY DỰNG] Đã thoát chế độ xây")
 # THÊM HÀM NÀY VÀO FILE grid_map.gd
 func place_foundation_at_mouse() -> void:
-	if foundation_scene == null:
-		print("👉 [LỖI XÂY DỰNG] Chưa gán foundation_scene trong Inspector của GridMap!")
+	if current_selected_foundation == null:
+		print("👉 [LỖI XÂY DỰNG] Chưa chọn công trình nào để xây!")
 		return
-
+		
 	var mouse_pos = get_global_mouse_position()
-	var grid_pos = get_cell_center(mouse_pos)
+	var cell = local_to_map(mouse_pos)
+	var snap_pos = get_cell_center(mouse_pos)
 	
-	print("👉 [XÂY DỰNG] Đang thử đặt móng tại tọa độ: ", grid_pos)
-	
-	if is_tile_occupied(grid_pos):
-		print("👉 [XÂY DỰNG] Ô này đã có vật cản, không thể xây!")
+	if is_tile_occupied(snap_pos) or astar_grid.is_point_solid(cell):
+		print("👉 [XÂY DỰNG] Ô này đã có vật cản!")
 		return
-
-	var foundation = foundation_scene.instantiate()
-	foundation.global_position = grid_pos
+		
+	var foundation = current_selected_foundation.instantiate()
+	foundation.global_position = snap_pos
 	get_parent().add_child(foundation)
-	update_wall_obstacle(grid_pos, true)
-	print("👉 [XÂY DỰNG] Đặt móng thành công tại: ", grid_pos)
-
+	
+	update_wall_obstacle(snap_pos, true)
+	print("👉 [XÂY DỰNG] Đặt móng thành công tại: ", snap_pos)
 # THÊM HÀM NÀY VÀO CUỐI FILE grid_map.gd
 func is_tile_occupied(pos: Vector2) -> bool:
 	for f in get_tree().get_nodes_in_group("foundations"):
@@ -297,3 +303,17 @@ func _spawn_random_wood_nodes(count: int) -> void:
 			spawned += 1
 			
 	print("🌲 [TÀI NGUYÊN] Đã rải thành công ", spawned, " mỏ gỗ trên bản đồ!")				
+	
+func select_building_type(type: String) -> void:
+	is_building_mode = true
+	match type:
+		"wall":
+			current_selected_foundation = wall_foundation_scene
+			print("🏗️ [MENU XÂY DỰNG] Đã chọn XÂY TƯỜNG")
+		"tower":
+			current_selected_foundation = tower_foundation_scene
+			print("🏗️ [MENU XÂY DỰNG] Đã chọn XÂY THÁP CANH")
+		_:
+			is_building_mode = false
+			current_selected_foundation = null
+			print("🏗️ [MENU XÂY DỰNG] Đã HỦY chế độ xây")

@@ -5,6 +5,7 @@ signal wood_changed(new_amount: int)
 
 var gold_storage: int = 0
 var wood_storage: int = 0
+var current_hp: float = 200.0
 
 @export var worker_scene: PackedScene
 
@@ -40,3 +41,13 @@ func use_resource(type: String, amount: int) -> bool:
 			gold_changed.emit(gold_storage)
 			return true
 	return false
+# THÊM HÀM NÀY VÀO CUỐI FILE base.gd
+func take_damage(amount: float) -> void:
+	current_hp -= amount
+	# BẰNG CHỨNG LOG: Căn cứ báo cáo khi bị trừ máu
+	print("🏰 [CĂN CỨ] Bị tấn công! Máu còn: ", current_hp)
+	
+	if current_hp <= 0:
+		print("💥 [CĂN CỨ] NHÀ CHÍNH ĐÃ BỊ PHÁ HỦY! GAME OVER!")
+		# Tạm thời khi chết sẽ đổi màu đen để biểu diễn (sau này có thể làm màn hình Game Over)
+		$ColorRect.color = Color.BLACK
