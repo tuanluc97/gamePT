@@ -5,7 +5,7 @@ extends Node2D
 @export var tower_foundation_scene: PackedScene # Móng Tháp
 @export var trap_foundation_scene: PackedScene  # Móng Bẫy
 @export var wood_node_scene: PackedScene
-
+@export var gold_node_scene: PackedScene
 var current_selected_foundation: PackedScene = null # Công trình đang được chọn để xây
 var is_building_mode: bool = false
 var astar_grid: AStarGrid2D
@@ -232,12 +232,13 @@ func _get_total_wood_on_map() -> int:
 # THAY THẾ HOẶC THÊM HÀM NÀY TRONG FILE grid_map.gd
 var wood_check_timer: float = 0.0
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
 func _process(delta: float) -> void:
 	wood_check_timer += delta
-	if wood_check_timer >= 2.0: # Kiểm tra định kỳ mỗi 2 giây
+	if wood_check_timer >= 2.0:
 		wood_check_timer = 0.0
 		_maintain_wood_supply()
-# 2. Hàm tự động kiểm tra điều kiện và sinh mỏ gỗ mới
+		_maintain_gold_supply() # THÊM DÒNG NÀY: Duy trì cả mỏ Vàng
 func _maintain_wood_supply() -> void:
 	if wood_node_scene == null: return
 	
@@ -317,3 +318,39 @@ func select_building_type(type: String) -> void:
 			is_building_mode = false
 			current_selected_foundation = null
 			print("🏗️ [MENU XÂY DỰNG] Đã HỦY chế độ xây")
+# THÊM 2 HÀM NÀY VÀO CUỐI FILE grid_map.gd
+
+func _get_total_gold_on_map() -> int:
+	var total_gold = 0
+	var all_nodes = get_tree().get_nodes_in_group("gold_nodes") + get_tree().get_nodes_in_group("hidden_resources")
+	for node in all_nodes:
+		if is_instance_valid(node) and "current_gold" in node:
+			total_gold += node.current_gold
+	return total_gold
+
+func _maintain_gold_supply() -> void:
+	if gold_node_scene == null: return
+	
+	var current_total = _get_total_gold_on_map()
+	var max_cap = 500 # Giới hạn 500 Vàng
+	
+	if current_total < max_cap:
+		var deficit = max_cap - current_total
+		if deficit >= 30:
+			var rand_pos = Vector2(randf_range(-1900, 1900), randf_range(-1900, 1900))
+			rand_pos = get_cell_center(rand_pos)
+			var cell = local_to_map(rand_pos)
+			
+			if not astar_grid.is_point_solid(cell):
+				var gold = gold_node_scene.instantiate()
+				gold.global_position = rand_pos
+				
+				var rand_val = min(randi_range(30, 50), deficit)
+				gold.set("max_gold", rand_val)
+				gold.set("current_gold", rand_val)
+				
+				get_parent().add_child(gold)
+				update_wall_obstacle(rand_pos, true)
+				
+				# LOG BẰNG CHỨNG
+				print("🪙 [TÀI NGUYÊN] Đã sinh mỏ Vàng mới (+", rand_val, ") tại: ", rand_pos, " | Tổng Vàng toàn map: ", _get_total_gold_on_map(), "/", max_cap)

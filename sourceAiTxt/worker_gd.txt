@@ -30,6 +30,9 @@ var current_path: Array[Vector2] = []
 # CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
 func _ready() -> void:
 	add_to_group("workers")
+	speed = Global.worker_speed # Đọc tốc độ từ Menu
+	
+	harvest_timer.wait_time = 5.0 # Mặc định 5s như bạn yêu cầu
 	harvest_timer.timeout.connect(_on_harvest_finished)
 	queue_redraw()
 	
@@ -321,22 +324,22 @@ func start_harvesting() -> void:
 	velocity = Vector2.ZERO
 	harvest_timer.start()
 
-# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
 func _on_harvest_finished() -> void:
 	if current_job == Job.GOLD_MINER and is_instance_valid(target_gold_node):
 		if target_gold_node.has_method("harvest"):
-			carried_gold = target_gold_node.harvest(1) # SỬA: Chỉ lấy 1 vàng
+			var amt = target_gold_node.harvest(Global.worker_harvest_amt)
+			carried_gold = min(amt, Global.worker_carry_cap) # Ép giới hạn túi đồ
 		_return_to_base()
 		
 	elif current_job == Job.WOOD_CHOPPER and is_instance_valid(target_wood_node):
 		if target_wood_node.has_method("harvest"):
-			carried_wood = target_wood_node.harvest(1) # SỬA: Chỉ lấy 1 gỗ
-			print("🪵 [THU HOẠCH] Nông dân đã lấy ", carried_wood, " tài nguyên. Đang mang về!")
+			var amt = target_wood_node.harvest(Global.worker_harvest_amt)
+			carried_wood = min(amt, Global.worker_carry_cap) # Ép giới hạn túi đồ
+			print("🪵 [THU HOẠCH] Nông dân lấy ", carried_wood, " tài nguyên. Sức chứa tối đa: ", Global.worker_carry_cap)
 		_return_to_base()
 		
 	else:
 		current_state = State.IDLE
-
 # CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
 func _return_to_base() -> void:
 	if main_base:

@@ -8,10 +8,27 @@ var wave_interval: float = 100.0 # Tạm để 10 giây để test (Sau này đ�
 var current_wave: int = 0
 @export var monster_scene: PackedScene # Dùng để kéo thả file Quái vật vào sau này
 func _ready() -> void:
-	print("--- GAME PHÒNG THỦ BẮT ĐẦU ---")
-	print("Vàng hiện có: ", player_gold)
-	print("Máu thành: ", castle_health)
-
+	wave_interval = Global.wave_interval # Đọc thời gian quái từ Menu
+	print("--- GAME PHÒNG THỦ BẮT ĐẦU --- | Wave Timer: ", wave_interval, "s")
+	
+	var bases = get_tree().get_nodes_in_group("main_base")
+	if bases.size() > 0:
+		# Kết nối đường dây nóng: Lắng nghe tín hiệu nhà sập
+		bases[0].game_over.connect(_on_game_over)
+func _on_game_over() -> void:
+	print("🛑 [MAIN] NHẬN LỆNH GAME OVER! Tạm dừng (Pause) toàn bộ Game!")
+	get_tree().paused = true # Đóng băng toàn bộ hoạt động (quái, nông dân, tháp)
+	
+	# Code nhanh 1 bảng chữ GAME OVER ĐỎ chót giữa màn hình (Không cần vẽ UI tay)
+	var canvas = CanvasLayer.new()
+	canvas.layer = 100
+	var label = Label.new()
+	label.text = "GAME OVER"
+	label.add_theme_font_size_override("font_size", 80)
+	label.add_theme_color_override("font_color", Color.RED)
+	label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	canvas.add_child(label)
+	add_child(canvas)
 func _process(delta: float) -> void:
 	# Hệ thống đếm giờ sinh quái (Wave Timer)
 	wave_timer += delta

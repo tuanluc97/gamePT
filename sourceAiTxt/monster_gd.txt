@@ -6,7 +6,8 @@ var monster_type: MonsterType = MonsterType.FAST
 var speed: float = 140.0
 var max_hp: float = 30.0
 var current_hp: float = 30.0
-
+var attack_damage: float = 1.0
+var attack_timer: float = 0.0
 var main_base: Node2D = null
 var grid_manager: Node2D = null
 var current_path: Array[Vector2] = []
@@ -31,7 +32,6 @@ func _ready() -> void:
 # CHỈ SỬA 2 HÀM NÀY TRONG FILE monster.gd
 
 func setup(type: int) -> void:
-	# FIX BUG 2: Kiểm tra xem Node đã ready chưa, nếu chưa mới đợi để tránh bị treo vĩnh viễn
 	if not is_node_ready():
 		await ready
 		
@@ -41,13 +41,13 @@ func setup(type: int) -> void:
 	if monster_type == MonsterType.FAST:
 		speed = 150.0
 		max_hp = 30.0
+		attack_damage = 1.0 # BẢN VÁ: Quái nhanh dame 1
 		scale = Vector2(0.8, 0.8)
-		print("🎨 [QUÁI VẬT] Đã nạp thành công loại NHANH (Tam giác Vàng)")
 	elif monster_type == MonsterType.TANK:
 		speed = 60.0
 		max_hp = 120.0
+		attack_damage = 2.0 # BẢN VÁ: Quái trâu dame 2
 		scale = Vector2(1.3, 1.3)
-		print("🎨 [QUÁI VẬT] Đã nạp thành công loại TRÂU (Vuông Đỏ)")
 		
 	current_hp = max_hp
 	queue_redraw()
@@ -72,9 +72,7 @@ func _move_along_path() -> void:
 			var collision = get_slide_collision(0)
 			if collision:
 				global_position += collision.get_normal() * 2.0
-# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE monster.gd
 func _physics_process(delta: float) -> void:
-	# Bắt buộc yêu cầu Godot vẽ lại mỗi khung hình để cập nhật số Máu liên tục
 	queue_redraw() 
 	
 	path_update_timer += delta
@@ -83,7 +81,17 @@ func _physics_process(delta: float) -> void:
 		_request_path_to_base()
 		
 	_move_along_path()
-
+	
+	# === LOGIC TẤN CÔNG NHÀ CHÍNH ===
+	if main_base and is_instance_valid(main_base):
+		# Nếu khoảng cách tới tâm nhà chính < 80px (đang đứng sát vách)
+		if global_position.distance_to(main_base.global_position) < 80.0:
+			attack_timer += delta
+			if attack_timer >= 1.0: # Đánh mỗi 1 giây (1 dame/s hoặc 2 dame/s)
+				attack_timer = 0.0
+				if main_base.has_method("take_damage"):
+					main_base.take_damage(attack_damage)
+					print("⚔️ [QUÁI VẬT] Vừa cắn nhà chính! Gây sát thương: ", attack_damage)
 func _request_path_to_base() -> void:
 	if grid_manager and main_base:
 		current_path = grid_manager.get_path_for_ant(global_position, main_base.global_position)

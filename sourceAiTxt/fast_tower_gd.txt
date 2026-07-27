@@ -39,7 +39,7 @@ func _shoot() -> void:
 			laser_timer = 0.05
 			queue_redraw()
 			# BẰNG CHỨNG LOG: Bắn trúng quái
-			print("⚡ [THÁP CANH] Bắn Laser trúng quái tại: ", current_target.global_position)
+			#print("⚡ [THÁP CANH] Bắn Laser trúng quái tại: ", current_target.global_position)
 
 func _find_target() -> void:
 	current_target = null
