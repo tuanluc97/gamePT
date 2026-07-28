@@ -1,0 +1,104 @@
+extends CanvasLayer
+
+@onready var bottom_panel: Control = $BottomPanel
+@onready var toggle_btn: Button = $ToggleBtn
+
+# Tài nguyên (Góc trên trái)
+@onready var gold_label: Label = $ResourcePanel/HBoxContainer/GoldLabel
+@onready var wood_label: Label = $ResourcePanel/HBoxContainer/WoodLabel
+
+# Bảng Log (Cột Trái của BottomPanel)
+@onready var log_text: RichTextLabel = $BottomPanel/MainHBox/LogVBox/LogText
+
+# Các Menu Ngữ cảnh (Cột Giữa)
+@onready var default_menu: VBoxContainer = $BottomPanel/MainHBox/ContextVBox/DefaultMenu
+@onready var base_menu: VBoxContainer = $BottomPanel/MainHBox/ContextVBox/BaseMenu
+@onready var tower_menu: VBoxContainer = $BottomPanel/MainHBox/ContextVBox/TowerMenu
+@onready var hero_menu: VBoxContainer = $BottomPanel/MainHBox/ContextVBox/HeroMenu
+
+# Nút chức năng trong Menu Ngữ cảnh
+@onready var btn_wall: Button = default_menu.get_node("BuildHBox/BtnWall")
+@onready var btn_tower: Button = default_menu.get_node("BuildHBox/BtnTower")
+@onready var btn_trap: Button = default_menu.get_node("BuildHBox/BtnTrap")
+@onready var buy_worker_btn: Button = base_menu.get_node("BuyWorkerBtn")
+@onready var hp_label: Label = base_menu.get_node("BaseHPLabel")
+
+func _ready() -> void:
+	add_to_group("unified_ui")
+	_adjust_panel_position()
+	
+	# Mặc định mở Menu Xây Dựng
+	switch_context("default")
+	
+	# Kết nối sự kiện nút bấm
+	toggle_btn.pressed.connect(_on_toggle_pressed)
+	btn_wall.pressed.connect(func(): _select_build("wall"))
+	btn_tower.pressed.connect(func(): _select_build("tower"))
+	btn_trap.pressed.connect(func(): _select_build("trap"))
+	buy_worker_btn.pressed.connect(_on_buy_worker_pressed)
+	
+	Global.log_event.connect(_on_new_log)
+
+# BẢN VÁ UI: Chuyển đổi linh hoạt giữa các bảng Menu
+func switch_context(context_name: String) -> void:
+	print("🎛️ [UI] Chuyển đổi Menu sang ngữ cảnh: ", context_name)
+	default_menu.visible = (context_name == "default")
+	base_menu.visible = (context_name == "base")
+	tower_menu.visible = (context_name == "tower")
+	hero_menu.visible = (context_name == "hero")
+
+func _adjust_panel_position() -> void:
+	var screen_height = get_viewport().get_visible_rect().size.y
+	if bottom_panel:
+		bottom_panel.global_position.y = screen_height - bottom_panel.size.y
+		toggle_btn.global_position.y = bottom_panel.global_position.y - 30.0
+
+func _on_toggle_pressed() -> void:
+	bottom_panel.visible = !bottom_panel.visible
+	toggle_btn.text = "Mở Giao Diện" if not bottom_panel.visible else "Ẩn Giao Diện"
+
+# THÊM TOÀN BỘ KHỐI NÀY VÀO CUỐI FILE unified_ui.gd
+
+# --- THAO TÁC XÂY DỰNG & MUA KIẾN ---
+func _select_build(type: String) -> void:
+	var grid = get_tree().get_nodes_in_group("grid_manager")
+	if grid.size() > 0 and grid[0].has_method("select_building_type"):
+		grid[0].select_building_type(type)
+		# BẰNG CHỨNG LOG: Xác nhận UI đã phát lệnh xây
+		print("🧰 [UI HỢP NHẤT] Đã truyền lệnh XÂY DỰNG loại: ", type)
+
+func _on_buy_worker_pressed() -> void:
+	var bases = get_tree().get_nodes_in_group("main_base")
+	if bases.size() > 0 and bases[0].has_method("_on_buy_pressed"):
+		bases[0]._on_buy_pressed()
+		# BẰNG CHỨNG LOG: Xác nhận UI đã phát lệnh mua
+		print("🧰 [UI HỢP NHẤT] Đã truyền lệnh MUA KIẾN tới Nhà Chính")
+
+# --- HÀM CẬP NHẬT CHỈ SỐ HUD ---
+func update_gold(amount: int) -> void:
+	if gold_label: gold_label.text = "Vàng: " + str(amount)
+
+func update_wood(amount: int) -> void:
+	if wood_label: wood_label.text = "Gỗ: " + str(amount)
+
+func update_base_hp(current_hp: float, max_hp: float) -> void:
+	if hp_label: hp_label.text = "HP Căn Cứ: " + str(int(current_hp)) + "/" + str(int(max_hp))
+
+func update_buy_queue(queue_count: int) -> void:
+	if buy_worker_btn:
+		buy_worker_btn.text = "Mua Kiến (10 Vàng) - Hàng chờ: " + str(queue_count)
+
+# --- HIỂN THỊ LOG BBCODE ---
+func _on_new_log(type: String, msg: String) -> void:
+	var color_code = "white"
+	match type:
+		"alert": color_code = "red"
+		"success": color_code = "green"
+		"build": color_code = "yellow"
+		"system": color_code = "cyan"
+		
+	if log_text:
+		log_text.text += "\n[color=" + color_code + "]" + msg + "[/color]"
+		log_text.scroll_to_line(log_text.get_line_count() - 1)
+		
+	print("📺 [GIAO DIỆN LOG] Đã in: ", msg)

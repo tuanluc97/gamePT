@@ -184,20 +184,47 @@ func update_wall_obstacle(pos: Vector2, is_solid: bool, is_trap: bool = false) -
 	# Quái vật coi Bẫy là đường bằng phẳng
 	if not is_trap:
 		monster_astar_grid.set_point_solid(cell, is_solid)
-
-# CHỈ THAY THẾ ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
-# THÊM/SỬA HÀM NÀY TRONG FILE grid_map.gd
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
 func _unhandled_input(event: InputEvent) -> void:
-	if is_building_mode and event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			# Đặt móng khi click chuột trái
-			place_foundation_at_mouse()
+	if event is InputEventMouseButton and event.pressed:
+		# BẰNG CHỨNG LOG: Bắt tín hiệu xem chuột số mấy đang click xuống bản đồ
+		print("🚨 [BẮT CLICK] Lưới nhận Chuột số: ", event.button_index, " | Chế độ xây: ", is_building_mode)
+		
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if is_building_mode:
+				place_foundation_at_mouse()
+			else:
+				# BẰNG CHỨNG LOG: Click đất trống trả về Menu mặc định
+				print("🌱 [GRID MAP] Click vào đất trống! Mở Menu Xây dựng.")
+				var uis = get_tree().get_nodes_in_group("unified_ui")
+				if uis.size() > 0 and uis[0].has_method("switch_context"):
+					uis[0].switch_context("default")
 			
-		elif event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
-			# Chuột phải để thoát chế độ xây dựng
-			is_building_mode = false
-			current_selected_foundation = null
-			print("👉 [XÂY DỰNG] Đã thoát chế độ xây")
+		# 2. Bấm chuột Phải (Nút số 2): Chức năng Xóa móng / Thoát xây
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			var mouse_pos = get_global_mouse_position()
+			var snap_pos = get_cell_center(mouse_pos)
+			
+			var found_foundation = false
+			var nodes = get_tree().get_nodes_in_group("foundations")
+			
+			for n in nodes:
+				if is_instance_valid(n) and n.global_position.distance_to(snap_pos) < 5.0:
+					# Nếu có thợ đang lấy gỗ cho móng này thì hủy lệnh của thợ
+					if "is_wood_assigned" in n and n.is_wood_assigned:
+						n.is_wood_assigned = false
+					
+					n.queue_free()
+					update_wall_obstacle(snap_pos, false) # Trả lại đường đi cho A*
+					found_foundation = true
+					print("🗑️ [XÓA MÓNG] Thành công! Đã đập bỏ móng tại: ", snap_pos)
+					break
+			
+			# Nếu tay đang cầm công cụ xây mà click chuột phải ra bãi đất trống
+			if not found_foundation and is_building_mode:
+				is_building_mode = false
+				current_selected_foundation = null
+				print("👉 [XÂY DỰNG] Đã thoát chế độ xây do click chuột phải ra đất trống.")
 # THÊM HÀM NÀY VÀO FILE grid_map.gd
 func place_foundation_at_mouse() -> void:
 	if current_selected_foundation == null:
@@ -317,6 +344,7 @@ func _spawn_random_wood_nodes(count: int) -> void:
 			
 	print("🌲 [TÀI NGUYÊN] Đã rải thành công ", spawned, " mỏ gỗ trên bản đồ!")				
 	
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
 func select_building_type(type: String) -> void:
 	is_building_mode = true
 	match type:
@@ -326,21 +354,27 @@ func select_building_type(type: String) -> void:
 			current_selected_foundation = tower_foundation_scene
 		"trap":
 			current_selected_foundation = trap_foundation_scene
-			print("🏗️ [MENU XÂY DỰNG] Đã chọn XÂY BẪY")
+			# BẰNG CHỨNG LOG: Kiểm tra xem biến chứa scene bẫy có tồn tại không
+			print("🏗️ [GRID DEBUG] Đã nhận lệnh XÂY BẪY! Dữ liệu trap_foundation_scene là: ", trap_foundation_scene)
 		_:
 			is_building_mode = false
 			current_selected_foundation = null
-
-# 6. THÊM HÀM NÀY VÀO CUỐI FILE grid_map.gd (Dành riêng cho Quái)
+			print("🏗️ [GRID DEBUG] Hủy chọn công trình.")# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
 func get_path_for_monster(start_pos: Vector2, end_pos: Vector2) -> Array[Vector2]:
 	var start_cell = local_to_map(start_pos)
 	var end_cell = local_to_map(end_pos)
+	
 	if not monster_astar_grid.is_in_boundsv(start_cell) or not monster_astar_grid.is_in_boundsv(end_cell):
 		return []
+		
 	var path_cells = monster_astar_grid.get_id_path(start_cell, end_cell)
 	var path_positions: Array[Vector2] = []
+	
 	for cell in path_cells:
-		path_positions.append(get_cell_center(map_to_local(cell)))
+		# BẢN VÁ LỖI: Dùng hàm của AStarGrid thay vì map_to_local, sau đó cộng thêm nửa ô để lấy đúng tâm
+		var world_pos = monster_astar_grid.get_point_position(cell)
+		path_positions.append(world_pos + Vector2(grid_size / 2.0, grid_size / 2.0))
+		
 	return path_positions
 
 func _get_total_gold_on_map() -> int:

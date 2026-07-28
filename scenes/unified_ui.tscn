@@ -1,0 +1,123 @@
+[gd_scene format=3 uid="uid://bodhpfs0rmc0j"]
+
+[ext_resource type="Script" uid="uid://cllu1m6qy0mdg" path="res://codeGd/unified_ui.gd" id="1_qoaj3"]
+
+[node name="UnifiedUI" type="CanvasLayer" unique_id=874270808]
+script = ExtResource("1_qoaj3")
+
+[node name="ResourcePanel" type="PanelContainer" parent="." unique_id=518983832]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ResourcePanel" unique_id=314391978]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="GoldLabel" type="Label" parent="ResourcePanel/HBoxContainer" unique_id=1934614641]
+layout_mode = 2
+text = "Vàng: 50"
+
+[node name="WoodLabel" type="Label" parent="ResourcePanel/HBoxContainer" unique_id=365809749]
+layout_mode = 2
+text = "Gỗ: 0"
+
+[node name="BottomPanel" type="Control" parent="." unique_id=1733300827]
+layout_mode = 3
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="ColorRect" type="ColorRect" parent="BottomPanel" unique_id=1204740266]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.2, 0.2, 0.2, 0.7058824)
+
+[node name="MainHBox" type="HBoxContainer" parent="BottomPanel" unique_id=1235676354]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LogVBox" type="VBoxContainer" parent="BottomPanel/MainHBox" unique_id=554595612]
+layout_mode = 2
+
+[node name="RichTextLabel" type="RichTextLabel" parent="BottomPanel/MainHBox/LogVBox" unique_id=1599806854]
+layout_mode = 2
+bbcode_enabled = true
+
+[node name="ContextVBox" type="VBoxContainer" parent="BottomPanel/MainHBox" unique_id=1415179805]
+layout_mode = 2
+
+[node name="DefaultMenu" type="VBoxContainer" parent="BottomPanel/MainHBox/ContextVBox" unique_id=808379065]
+layout_mode = 2
+
+[node name="BuildHBox" type="HBoxContainer" parent="BottomPanel/MainHBox/ContextVBox/DefaultMenu" unique_id=2099949288]
+layout_mode = 2
+
+[node name="BtnWall" type="Button" parent="BottomPanel/MainHBox/ContextVBox/DefaultMenu/BuildHBox" unique_id=1278949778]
+layout_mode = 2
+text = "Xây Tường"
+
+[node name="BtnTower" type="Button" parent="BottomPanel/MainHBox/ContextVBox/DefaultMenu/BuildHBox" unique_id=495253056]
+layout_mode = 2
+text = "Xây Tháp"
+
+[node name="BtnTrap" type="Button" parent="BottomPanel/MainHBox/ContextVBox/DefaultMenu/BuildHBox" unique_id=96722125]
+layout_mode = 2
+text = "Xây Bẫy"
+
+[node name="BaseMenu" type="VBoxContainer" parent="BottomPanel/MainHBox/ContextVBox" unique_id=522221667]
+layout_mode = 2
+
+[node name="BaseHPLabel" type="Label" parent="BottomPanel/MainHBox/ContextVBox/BaseMenu" unique_id=290801908]
+layout_mode = 2
+text = "HP Căn Cứ: 200/200"
+
+[node name="BuyWorkerBtn" type="Button" parent="BottomPanel/MainHBox/ContextVBox/BaseMenu" unique_id=52637466]
+layout_mode = 2
+text = "Mua 1 công nhân"
+
+[node name="TowerMenu" type="VBoxContainer" parent="BottomPanel/MainHBox/ContextVBox" unique_id=739985976]
+layout_mode = 2
+
+[node name="TowerInfoLabel" type="Label" parent="BottomPanel/MainHBox/ContextVBox/TowerMenu" unique_id=2014927034]
+layout_mode = 2
+text = "Tháp Canh Cấp 1"
+
+[node name="UpgradeTowerBtn" type="Button" parent="BottomPanel/MainHBox/ContextVBox/TowerMenu" unique_id=1944755310]
+layout_mode = 2
+text = "Nâng cấp (50 Vàng)"
+
+[node name="HeroMenu" type="VBoxContainer" parent="BottomPanel/MainHBox/ContextVBox" unique_id=960107062]
+layout_mode = 2
+
+[node name="HeroInfoLabel" type="Label" parent="BottomPanel/MainHBox/ContextVBox/HeroMenu" unique_id=1027157629]
+layout_mode = 2
+text = "Hero Chiến Binh"
+
+[node name="UpgradeHeroBtn" type="Button" parent="BottomPanel/MainHBox/ContextVBox/HeroMenu" unique_id=2023342219]
+layout_mode = 2
+text = "Nâng cấp (100 Vàng)"
+
+[node name="MiniMapVBox" type="VBoxContainer" parent="BottomPanel/MainHBox" unique_id=1922277658]
+layout_mode = 2
+
+[node name="MapPlaceholder" type="ColorRect" parent="BottomPanel/MainHBox/MiniMapVBox" unique_id=1253650948]
+layout_mode = 2
+color = Color(0.6431373, 0.6431373, 0.6431373, 0.5254902)
+
+[node name="ToggleBtn" type="Button" parent="." unique_id=370940309]
+offset_left = 1142.0
+offset_top = 640.0
+offset_right = 1150.0
+offset_bottom = 648.0

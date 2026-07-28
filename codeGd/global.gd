@@ -1,5 +1,6 @@
 extends Node
-
+# THÊM DÒNG NÀY LÊN ĐẦU FILE global.gd (Ngay dưới dòng extends Node)
+signal log_event(msg_type: String, message: String)
 # CÁC THÔNG SỐ MẶC ĐỊNH
 var base_hp: float = 200.0
 var wave_interval: float = 180.0

@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://o8mx03d3xmxp"]
+
+[ext_resource type="Script" uid="uid://1r4vagcyr63d" path="res://codeGd/trap.gd" id="1_npg1n"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_o3tup"]
+size = Vector2(32, 32)
+
+[node name="Trap" type="Area2D" unique_id=845713435]
+script = ExtResource("1_npg1n")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=164114742]
+shape = SubResource("RectangleShape2D_o3tup")

@@ -20,7 +20,7 @@ func discover() -> void:
 		show() # Hiện hình
 		remove_from_group("hidden_resources")
 		add_to_group("gold_nodes") # Báo cho thợ mỏ biết!
-		print("🗺️ Trinh sát đã phát hiện một Mỏ Vàng!")
+		Global.log_event.emit("success", "Trinh sát đã phát hiện Mỏ vàng")
 
 func harvest(amount: int) -> int:
 	var actual_harvested = min(amount, current_gold)

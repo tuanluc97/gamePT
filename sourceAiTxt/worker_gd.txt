@@ -335,7 +335,6 @@ func _on_harvest_finished() -> void:
 		if target_wood_node.has_method("harvest"):
 			var amt = target_wood_node.harvest(Global.worker_harvest_amt)
 			carried_wood = min(amt, Global.worker_carry_cap) # Ép giới hạn túi đồ
-			print("🪵 [THU HOẠCH] Nông dân lấy ", carried_wood, " tài nguyên. Sức chứa tối đa: ", Global.worker_carry_cap)
 		_return_to_base()
 		
 	else:
