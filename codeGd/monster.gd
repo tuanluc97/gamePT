@@ -12,6 +12,8 @@ var main_base: Node2D = null
 var grid_manager: Node2D = null
 var current_path: Array[Vector2] = []
 var path_update_timer: float = 0.0
+var trap_timer: float = 0.0
+var current_trap: Node2D = null
 
 @onready var color_rect: ColorRect = $ColorRect
 
@@ -75,6 +77,20 @@ func _move_along_path() -> void:
 func _physics_process(delta: float) -> void:
 	queue_redraw() 
 	
+	# Xử lý hiệu ứng bị kẹt trong bẫy
+	if trap_timer > 0:
+		trap_timer -= delta
+		if trap_timer <= 0:
+			if is_instance_valid(current_trap) and current_trap.has_method("release_monster"):
+				current_trap.release_monster(self)
+			set_meta("is_trapped", false)
+			
+			# Hết thời gian kẹt, bật lại va chạm vật lý để đi tiếp
+			collision_layer = 1
+			collision_mask = 1
+			print("💨 [QUÁI VẬT] Đã thoát khỏi bẫy!")
+		return # Bỏ qua di chuyển nếu đang bị kẹt
+	
 	path_update_timer += delta
 	if path_update_timer >= 1.5:
 		path_update_timer = 0.0
@@ -82,19 +98,15 @@ func _physics_process(delta: float) -> void:
 		
 	_move_along_path()
 	
-	# === LOGIC TẤN CÔNG NHÀ CHÍNH ===
+	# === LOGIC TẤN CÔNG NHÀ CHÍNH (Giữ nguyên) ===
 	if main_base and is_instance_valid(main_base):
-		# Nếu khoảng cách tới tâm nhà chính < 80px (đang đứng sát vách)
 		if global_position.distance_to(main_base.global_position) < 80.0:
 			attack_timer += delta
-			if attack_timer >= 1.0: # Đánh mỗi 1 giây (1 dame/s hoặc 2 dame/s)
+			if attack_timer >= 1.0:
 				attack_timer = 0.0
 				if main_base.has_method("take_damage"):
 					main_base.take_damage(attack_damage)
 					print("⚔️ [QUÁI VẬT] Vừa cắn nhà chính! Gây sát thương: ", attack_damage)
-func _request_path_to_base() -> void:
-	if grid_manager and main_base:
-		current_path = grid_manager.get_path_for_ant(global_position, main_base.global_position)
 
 # Hàm nhận sát thương
 func take_damage(amount: float) -> void:
@@ -120,3 +132,18 @@ func _draw() -> void:
 	var hp_text = str(current_hp) + "/" + str(max_hp)
 	# Tọa độ Vector2(0, 25) giúp đẩy chữ xuống dưới chân quái vật
 	draw_string(ThemeDB.fallback_font, Vector2(0, 25), hp_text, HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color.WHITE)
+func _request_path_to_base() -> void:
+	if grid_manager and main_base:
+		if grid_manager.has_method("get_path_for_monster"):
+			current_path = grid_manager.get_path_for_monster(global_position, main_base.global_position)
+		else:
+			current_path = grid_manager.get_path_for_ant(global_position, main_base.global_position)
+
+# 4. THÊM HÀM MỚI NÀY VÀO CUỐI FILE monster.gd
+func get_trapped(duration: float, trap_node: Node2D) -> void:
+	trap_timer = duration
+	current_trap = trap_node
+	set_meta("is_trapped", true)
+	# Mẹo nhỏ: Tắt va chạm vật lý để quái thứ 4 (khi bẫy đầy) có thể bước đi xuyên qua đầu quái đang kẹt
+	collision_layer = 0
+	collision_mask = 0

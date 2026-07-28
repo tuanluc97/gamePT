@@ -9,7 +9,7 @@ extends Node2D
 var current_selected_foundation: PackedScene = null # Công trình đang được chọn để xây
 var is_building_mode: bool = false
 var astar_grid: AStarGrid2D
-
+var monster_astar_grid: AStarGrid2D
 var map_width: int = 500
 var map_height: int = 500
 var offset_x: int = -250
@@ -74,11 +74,16 @@ func _auto_align_and_block() -> void:
 		res.global_position = get_cell_center(res.global_position)
 func _init_astar_grid() -> void:
 	astar_grid = AStarGrid2D.new()
+	astar_grid.region = Rect2i(-map_width / 2, -map_height / 2, map_width, map_height)
 	astar_grid.cell_size = Vector2(grid_size, grid_size)
-	astar_grid.region = Rect2i(offset_x, offset_y, map_width, map_height) 
-	astar_grid.offset = Vector2.ZERO 
-	astar_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
+	astar_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
 	astar_grid.update()
+	
+	monster_astar_grid = AStarGrid2D.new()
+	monster_astar_grid.region = Rect2i(-map_width / 2, -map_height / 2, map_width, map_height)
+	monster_astar_grid.cell_size = Vector2(grid_size, grid_size)
+	monster_astar_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
+	monster_astar_grid.update()
 
 # --- HÀM DEBUG TỌA ĐỘ ---
 func _debug_check_base_position() -> void:
@@ -171,8 +176,14 @@ func get_path_for_ant(start_pos: Vector2, target_pos: Vector2) -> Array[Vector2]
 		path_positions.append(Vector2(cell.x * grid_size + grid_size / 2.0, cell.y * grid_size + grid_size / 2.0))
 	return path_positions
 
-func update_wall_obstacle(global_pos: Vector2, is_solid: bool) -> void:
-	astar_grid.set_point_solid(local_to_map(global_pos), is_solid)
+func update_wall_obstacle(pos: Vector2, is_solid: bool, is_trap: bool = false) -> void:
+	var cell = local_to_map(pos)
+	# Kiến và Hero coi Bẫy là Tường vững chắc
+	astar_grid.set_point_solid(cell, is_solid)
+	
+	# Quái vật coi Bẫy là đường bằng phẳng
+	if not is_trap:
+		monster_astar_grid.set_point_solid(cell, is_solid)
 
 # CHỈ THAY THẾ ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
 # THÊM/SỬA HÀM NÀY TRONG FILE grid_map.gd
@@ -205,8 +216,9 @@ func place_foundation_at_mouse() -> void:
 	foundation.global_position = snap_pos
 	get_parent().add_child(foundation)
 	
-	update_wall_obstacle(snap_pos, true)
-	print("👉 [XÂY DỰNG] Đặt móng thành công tại: ", snap_pos)
+	var is_trap = (current_selected_foundation == trap_foundation_scene)
+	update_wall_obstacle(snap_pos, true, is_trap)
+	print("👉 [XÂY DỰNG] Đặt móng tại: ", snap_pos, " | Là bẫy: ", is_trap)
 # THÊM HÀM NÀY VÀO CUỐI FILE grid_map.gd
 func is_tile_occupied(pos: Vector2) -> bool:
 	for f in get_tree().get_nodes_in_group("foundations"):
@@ -310,15 +322,26 @@ func select_building_type(type: String) -> void:
 	match type:
 		"wall":
 			current_selected_foundation = wall_foundation_scene
-			print("🏗️ [MENU XÂY DỰNG] Đã chọn XÂY TƯỜNG")
 		"tower":
 			current_selected_foundation = tower_foundation_scene
-			print("🏗️ [MENU XÂY DỰNG] Đã chọn XÂY THÁP CANH")
+		"trap":
+			current_selected_foundation = trap_foundation_scene
+			print("🏗️ [MENU XÂY DỰNG] Đã chọn XÂY BẪY")
 		_:
 			is_building_mode = false
 			current_selected_foundation = null
-			print("🏗️ [MENU XÂY DỰNG] Đã HỦY chế độ xây")
-# THÊM 2 HÀM NÀY VÀO CUỐI FILE grid_map.gd
+
+# 6. THÊM HÀM NÀY VÀO CUỐI FILE grid_map.gd (Dành riêng cho Quái)
+func get_path_for_monster(start_pos: Vector2, end_pos: Vector2) -> Array[Vector2]:
+	var start_cell = local_to_map(start_pos)
+	var end_cell = local_to_map(end_pos)
+	if not monster_astar_grid.is_in_boundsv(start_cell) or not monster_astar_grid.is_in_boundsv(end_cell):
+		return []
+	var path_cells = monster_astar_grid.get_id_path(start_cell, end_cell)
+	var path_positions: Array[Vector2] = []
+	for cell in path_cells:
+		path_positions.append(get_cell_center(map_to_local(cell)))
+	return path_positions
 
 func _get_total_gold_on_map() -> int:
 	var total_gold = 0
