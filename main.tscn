@@ -6,15 +6,13 @@
 [ext_resource type="PackedScene" uid="uid://64r4yw0end3r" path="res://scenes/base.tscn" id="3_lquwl"]
 [ext_resource type="PackedScene" uid="uid://drfktv65yrdbh" path="res://scenes/worker.tscn" id="4_7mycd"]
 [ext_resource type="PackedScene" uid="uid://cg3ikekb0j78c" path="res://scenes/gold_node.tscn" id="5_272bh"]
-[ext_resource type="PackedScene" uid="uid://cf1fax3uvd332" path="res://scenes/hud.tscn" id="6_7mycd"]
 [ext_resource type="PackedScene" uid="uid://cfgvrlwg5qdbf" path="res://scenes/job_panel.tscn" id="7_272bh"]
 [ext_resource type="PackedScene" uid="uid://b1f8potlpwthw" path="res://scenes/wood_node.tscn" id="8_5vw27"]
 [ext_resource type="Script" uid="uid://dg3io3v1gabfd" path="res://codeGd/grid_map.gd" id="9_kek77"]
 [ext_resource type="PackedScene" uid="uid://dnb8gwsveh7mn" path="res://scenes/wall_foundation.tscn" id="10_4c57u"]
 [ext_resource type="PackedScene" uid="uid://cfmk6gb17esam" path="res://scenes/tower_foundation.tscn" id="11_dg77c"]
-[ext_resource type="PackedScene" uid="uid://c340kju1n1hgf" path="res://scenes/build_ui.tscn" id="13_ycdy4"]
 
-[node name="Main" type="Node2D" unique_id=1789200749]
+[node name="Main2" type="Node2D" unique_id=1789200749]
 script = ExtResource("1_ig7tw")
 monster_scene = ExtResource("2_efxa6")
 
@@ -31,8 +29,6 @@ position = Vector2(640, 960)
 [node name="GoldNode2" parent="." unique_id=1737179637 instance=ExtResource("5_272bh")]
 position = Vector2(-704, -768)
 
-[node name="HUD" parent="." unique_id=1359960512 instance=ExtResource("6_7mycd")]
-
 [node name="JobUI" parent="." unique_id=52776012 instance=ExtResource("7_272bh")]
 
 [node name="GridMap" type="Node2D" parent="." unique_id=1829036063]
@@ -41,5 +37,3 @@ grid_size = null
 wall_foundation_scene = ExtResource("10_4c57u")
 tower_foundation_scene = ExtResource("11_dg77c")
 wood_node_scene = ExtResource("8_5vw27")
-
-[node name="BuildUI" parent="." unique_id=166807003 instance=ExtResource("13_ycdy4")]

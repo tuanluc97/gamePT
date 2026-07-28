@@ -244,9 +244,13 @@ func place_foundation_at_mouse() -> void:
 	get_parent().add_child(foundation)
 	
 	var is_trap = (current_selected_foundation == trap_foundation_scene)
-	update_wall_obstacle(snap_pos, true, is_trap)
-	print("👉 [XÂY DỰNG] Đặt móng tại: ", snap_pos, " | Là bẫy: ", is_trap)
-# THÊM HÀM NÀY VÀO CUỐI FILE grid_map.gd
+	
+	# BẢN VÁ LỖI: XÓA BỎ lệnh update_wall_obstacle chặn đường ở đây. 
+	# Móng nhà là đất bằng, ai cũng giẫm lên được!
+	
+	# BẰNG CHỨNG LOG:
+	print("👉 [XÂY DỰNG] Đặt móng tại: ", snap_pos, " | Kiến và Quái VẪN ĐI XUYÊN QUA được!")
+	
 func is_tile_occupied(pos: Vector2) -> bool:
 	for f in get_tree().get_nodes_in_group("foundations"):
 		if f.global_position.distance_to(pos) < 5.0: return true

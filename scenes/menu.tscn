@@ -12,15 +12,33 @@ grow_vertical = 2
 script = ExtResource("1_yqeox")
 
 [node name="Background" type="ColorRect" parent="." unique_id=484474778]
-layout_mode = 0
-offset_right = 260.0
-offset_bottom = 400.0
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -130.0
+offset_top = -200.0
+offset_right = 130.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
 color = Color(0.031360228, 0.0043803346, 0.0039885035, 1)
 
 [node name="MainMenuVBox" type="VBoxContainer" parent="." unique_id=554108227]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -117.5
+offset_top = -46.5
+offset_right = 117.5
+offset_bottom = 46.5
+grow_horizontal = 2
+grow_vertical = 2
 alignment = 1
 
 [node name="TitleLabel" type="Label" parent="MainMenuVBox" unique_id=1393481298]
@@ -36,9 +54,18 @@ layout_mode = 2
 text = "TÙY CHỈNH GAME"
 
 [node name="SettingsPanel" type="PanelContainer" parent="." unique_id=583759742]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -132.0
+offset_top = -146.5
+offset_right = 132.0
+offset_bottom = 146.5
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="MarginContainer" type="MarginContainer" parent="SettingsPanel" unique_id=1509670480]
 layout_mode = 2

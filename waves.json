@@ -1,0 +1,17 @@
+[
+  {
+	"wave": 1,
+	"delay_between": 1.2,
+	"monsters": {
+	  "fast": { "count": 3, "speed": 150.0, "hp": 30.0, "dps": 2.0, "attack_range": 25.0 }
+	}
+  },
+  {
+	"wave": 2,
+	"delay_between": 0.8,
+	"monsters": {
+	  "fast": { "count": 4, "speed": 160.0, "hp": 40.0, "dps": 3.0, "attack_range": 25.0 },
+	  "tank": { "count": 2, "speed": 70.0, "hp": 150.0, "dps": 5.0, "attack_range": 30.0 }
+	}
+  }
+]

@@ -6,14 +6,12 @@
 [ext_resource type="PackedScene" uid="uid://64r4yw0end3r" path="res://scenes/base.tscn" id="4_jbj1t"]
 [ext_resource type="PackedScene" uid="uid://drfktv65yrdbh" path="res://scenes/worker.tscn" id="5_muem4"]
 [ext_resource type="PackedScene" uid="uid://cg3ikekb0j78c" path="res://scenes/gold_node.tscn" id="6_dp3eg"]
-[ext_resource type="PackedScene" uid="uid://cf1fax3uvd332" path="res://scenes/hud.tscn" id="7_0ld40"]
 [ext_resource type="PackedScene" uid="uid://cfgvrlwg5qdbf" path="res://scenes/job_panel.tscn" id="8_gqmmt"]
 [ext_resource type="Script" uid="uid://dg3io3v1gabfd" path="res://codeGd/grid_map.gd" id="9_yc10j"]
 [ext_resource type="PackedScene" uid="uid://dnb8gwsveh7mn" path="res://scenes/wall_foundation.tscn" id="10_jscy8"]
 [ext_resource type="PackedScene" uid="uid://cfmk6gb17esam" path="res://scenes/tower_foundation.tscn" id="11_pm3ni"]
 [ext_resource type="PackedScene" uid="uid://dhdjariiqsarh" path="res://scenes/trap_foundation.tscn" id="12_a8y0u"]
 [ext_resource type="PackedScene" uid="uid://b1f8potlpwthw" path="res://scenes/wood_node.tscn" id="12_y6deb"]
-[ext_resource type="PackedScene" uid="uid://c340kju1n1hgf" path="res://scenes/build_ui.tscn" id="13_og1vs"]
 [ext_resource type="PackedScene" uid="uid://bodhpfs0rmc0j" path="res://scenes/unified_ui.tscn" id="15_jkv2x"]
 
 [node name="Main" type="Node2D" unique_id=1789200749]
@@ -33,7 +31,6 @@ position = Vector2(640, 960)
 [node name="GoldNode2" parent="." unique_id=1737179637 instance=ExtResource("6_dp3eg")]
 position = Vector2(-704, -768)
 
-[node name="HUD" parent="." unique_id=1359960512 instance=ExtResource("7_0ld40")]
 
 [node name="JobUI" parent="." unique_id=52776012 instance=ExtResource("8_gqmmt")]
 
@@ -45,6 +42,5 @@ trap_foundation_scene = ExtResource("12_a8y0u")
 wood_node_scene = ExtResource("12_y6deb")
 gold_node_scene = ExtResource("6_dp3eg")
 
-[node name="BuildUI" parent="." unique_id=166807003 instance=ExtResource("13_og1vs")]
 
 [node name="UnifiedUI" parent="." unique_id=874270808 instance=ExtResource("15_jkv2x")]

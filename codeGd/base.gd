@@ -60,11 +60,17 @@ func _update_buy_ui() -> void:
 		
 func _on_spawn_timeout() -> void:
 	if spawn_queue > 0:
-		spawn_worker() # Gọi hàm sinh kiến có sẵn của bạn
+		spawn_worker()
 		spawn_queue -= 1
-		_update_buy_button_text()
-		Global.log_event.emit("success", "Huấn luyện Nông dân thành công!")		
-		# Nếu vẫn còn kiến trong hàng chờ, ấp tiếp con nữa (3s)
+		
+		# BẢN VÁ LỖI: Gọi đúng hàm kết nối với Unified UI để nó cập nhật lại Text trên màn hình
+		_update_buy_ui() 
+		
+		# BẰNG CHỨNG LOG: Xác minh mảng hàng chờ thực sự đã được trừ đi
+		print("🥚 [NHÀ CHÍNH] 1 Nông dân ra đời! Hàng chờ hiện tại cập nhật thành: ", spawn_queue)
+		Global.log_event.emit("success", "1 Kiến nông dân vừa ra đời!")
+		
+		# Nếu vẫn còn kiến trong hàng chờ, tiếp tục chạy timer
 		if spawn_queue > 0:
 			spawn_timer.start()
 
@@ -98,22 +104,21 @@ func spawn_worker() -> void:
 func add_resource(type: String, amount: int) -> void:
 	if type == "gold":
 		gold_storage += amount
-		gold_changed.emit(gold_storage)
+		gold_changed.emit(gold_storage) # Phải có dòng này để báo cho Unified UI
 	elif type == "wood":
 		wood_storage += amount
-		wood_changed.emit(wood_storage)
+		wood_changed.emit(wood_storage) # Phải có dòng này để báo cho Unified UI
 
-# Hàm cho nông dân lấy tài nguyên từ Nhà chính (Ví dụ lấy 10 gỗ để đi xây)
 func use_resource(type: String, amount: int) -> bool:
 	if type == "wood":
 		if wood_storage >= amount:
 			wood_storage -= amount
-			wood_changed.emit(wood_storage)
+			wood_changed.emit(wood_storage) # Phải có dòng này để trừ số Gỗ trên UI
 			return true
 	elif type == "gold":
 		if gold_storage >= amount:
 			gold_storage -= amount
-			gold_changed.emit(gold_storage)
+			gold_changed.emit(gold_storage) # Phải có dòng này để trừ số Vàng trên UI
 			return true
 	return false
 # THÊM HÀM NÀY VÀO CUỐI FILE base.gd

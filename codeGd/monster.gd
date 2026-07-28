@@ -106,7 +106,6 @@ func _physics_process(delta: float) -> void:
 				attack_timer = 0.0
 				if main_base.has_method("take_damage"):
 					main_base.take_damage(attack_damage)
-					print("⚔️ [QUÁI VẬT] Vừa cắn nhà chính! Gây sát thương: ", attack_damage)
 
 # Hàm nhận sát thương
 func take_damage(amount: float) -> void:
