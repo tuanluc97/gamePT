@@ -30,22 +30,36 @@ func _ready() -> void:
 	queue_redraw()
 	select_building_type("tower")
 # CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
 func _create_world_boundaries() -> void:
 	var bounds = StaticBody2D.new()
-	# Mở rộng bản đồ ra 4000x4000 px (Gấp đôi kích thước cũ)
-	var rect = Rect2(-2000, -2000, 4000, 4000) 
+	bounds.name = "WorldBounds"
 	
-	var shapes = [SegmentShape2D.new(), SegmentShape2D.new(), SegmentShape2D.new(), SegmentShape2D.new()]
-	shapes[0].a = rect.position; shapes[0].b = Vector2(rect.end.x, rect.position.y) # Bức tường Trên
-	shapes[1].a = shapes[0].b; shapes[1].b = rect.end # Bức tường Phải
-	shapes[2].a = rect.end; shapes[2].b = Vector2(rect.position.x, rect.end.y) # Bức tường Dưới
-	shapes[3].a = shapes[2].b; shapes[3].b = rect.position # Bức tường Trái
+	var rect = Rect2(offset_x, offset_y, map_width, map_height)
+	var thickness = 40.0
+	
+	# BẢN VÁ LỖI TOÁN HỌC: Đẩy tâm bức tường lùi ra KHỎI sân chơi một nửa bề dày (thickness / 2.0)
+	# Nhờ đó, vách trong của tường sẽ chạm vừa khít mép bản đồ, trả lại 100% diện tích cho Nông dân.
+	var shapes = [
+		[Vector2(rect.position.x - thickness/2.0, 0), Vector2(thickness, rect.size.y)], # Tường Trái
+		[Vector2(rect.end.x + thickness/2.0, 0), Vector2(thickness, rect.size.y)],      # Tường Phải
+		[Vector2(0, rect.position.y - thickness/2.0), Vector2(rect.size.x + thickness*2.0, thickness)], # Tường Trên
+		[Vector2(0, rect.end.y + thickness/2.0), Vector2(rect.size.x + thickness*2.0, thickness)]       # Tường Dưới
+	]
 	
 	for s in shapes:
-		var col = CollisionShape2D.new()
-		col.shape = s
-		bounds.add_child(col)
+		var coll = CollisionShape2D.new()
+		var rect_shape = RectangleShape2D.new()
+		rect_shape.size = s[1]
+		coll.shape = rect_shape
+		coll.position = s[0]
+		bounds.add_child(coll)
+		
 	add_child(bounds)
+	# BẰNG CHỨNG LOG:
+	print("🚧 [GRID MAP] Đã dựng tường biên, đẩy lùi an toàn ra khỏi sân chơi. Kích thước: ", map_width, "x", map_height)
 func _debug_check_objects() -> void:
 	var bases = get_tree().get_nodes_in_group("main_base")
 	if bases.size() > 0:
@@ -107,6 +121,7 @@ func _debug_check_base_position() -> void:
 
 # --- VẼ GIAO DIỆN DEBUG ---
 # CHỈ THAY THẾ ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
 func _draw() -> void:
 	var color = Color(1.0, 1.0, 1.0, 0.4) 
 	var draw_limit = 500 
@@ -122,13 +137,11 @@ func _draw() -> void:
 
 	# In log ranh giới hình ảnh thực tế của Nhà chính để đối chiếu với lưới
 	for b in get_tree().get_nodes_in_group("main_base"):
-		var left_edge = b.global_position.x - 32.0
-		var right_edge = b.global_position.x + 32.0
 		draw_circle(b.global_position, 5.0, Color.RED)
-		# THÊM ĐOẠN NÀY VÀO CUỐI HÀM _draw() TRONG FILE grid_map.gd
-	# Vẽ khung viền giới hạn bản đồ màu đen (Ví dụ kích thước map từ -2000 đến 2000)
-	var map_rect = Rect2(-2000, -2000, 4000, 4000)
-	draw_rect(map_rect, Color.BLACK, false, 4.0) # Viền đen dày 4px
+		
+	# BẢN VÁ LỖI: Vẽ khung viền giới hạn bản đồ ĐỘNG theo thông số map truyền vào
+	var map_rect = Rect2(offset_x, offset_y, map_width, map_height)
+	draw_rect(map_rect, Color.BLACK, false, 15.0) # Viền đen dày 15px để dễ nhìn thấy
 
 # ====================================================================
 # CÁC HÀM CỐT LÕI (BẮT BUỘC PHẢI CÓ)
@@ -415,3 +428,17 @@ func _maintain_gold_supply() -> void:
 				
 				# LOG BẰNG CHỨNG
 				print("🪙 [TÀI NGUYÊN] Đã sinh mỏ Vàng mới (+", rand_val, ") tại: ", rand_pos, " | Tổng Vàng toàn map: ", _get_total_gold_on_map(), "/", max_cap)
+# THÊM HÀM NÀY VÀO CUỐI FILE grid_map.gd
+func setup_map_size(w: int, h: int) -> void:
+	map_width = w
+	map_height = h
+	offset_x = -w / 2
+	offset_y = -h / 2
+	print("📏 [GRID MAP] Kích thước lưới được cập nhật thành: ", w, "x", h)
+	
+	# Phá tường cũ đi, xây lại tường mới theo kích thước mới
+	for child in get_children():
+		if child is StaticBody2D: 
+			child.queue_free()
+	_create_world_boundaries()
+	queue_redraw()

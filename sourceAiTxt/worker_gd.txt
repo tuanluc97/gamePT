@@ -30,8 +30,16 @@ var current_path: Array[Vector2] = []
 # CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
 func _ready() -> void:
 	add_to_group("workers")
-	speed = Global.worker_speed # Đọc tốc độ từ Menu
+	if typeof(Global) != TYPE_NIL and "worker_speed" in Global:
+		speed = Global.worker_speed
 	
+	# BẰNG CHỨNG LOG: Quét vật lý ngay khi đẻ để tìm thủ phạm
+	var collision_test = move_and_collide(Vector2.ZERO, true) 
+	if collision_test:
+		var collider = collision_test.get_collider()
+		print("🚨 [NÔNG DÂN] BỊ KẸT TẠI: ", global_position, " | Đang nằm kẹt bên trong vật thể: ", collider.name)
+	else:
+		print("✅ [NÔNG DÂN] Sinh ra an toàn tại: ", global_position)
 	harvest_timer.wait_time = 5.0 # Mặc định 5s như bạn yêu cầu
 	harvest_timer.timeout.connect(_on_harvest_finished)
 	queue_redraw()
@@ -69,8 +77,8 @@ func _draw() -> void:
 	if carrying_text != "":
 		draw_string(ThemeDB.fallback_font, Vector2(8, 4), carrying_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, text_color)
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
 func _physics_process(delta: float) -> void:
-	# Yêu cầu Godot cập nhật đồ họa/chữ liên tục
 	queue_redraw() 
 	
 	match current_job:
@@ -80,8 +88,32 @@ func _physics_process(delta: float) -> void:
 		Job.BUILDER: _process_builder_job(delta)
 		Job.SCOUT: _process_scout_job(delta)
 
-# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
-# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
+	# Để Godot lo việc di chuyển và trượt dọc theo vật cản (Đá/Tường)
+	move_and_slide()
+
+	# ==========================================
+	# 1. XỬ LÝ NỘP TÀI NGUYÊN (Chỉ kiểm tra chạm Nhà chính)
+	# ==========================================
+	if current_state == State.RETURNING_TO_BASE and get_slide_collision_count() > 0:
+		for i in range(get_slide_collision_count()):
+			var collider = get_slide_collision(i).get_collider()
+			if collider and collider.is_in_group("main_base"):
+				print("🏠 [NÔNG DÂN] Đã về tới cửa Nhà chính! Nộp đồ.")
+				velocity = Vector2.ZERO
+				deposit_resources()
+				break # Nộp xong thì thoát vòng lặp kiểm tra
+
+	# ==========================================
+	# 2. HỆ THỐNG CHỐNG KẸT THÔNG MINH (Stuck Detection)
+	# ==========================================
+	# Nếu AI đang ra lệnh di chuyển (velocity > 0)
+	# NHƯNG nhân vật không thể nhích lên được (get_real_velocity < 5.0) -> Chắc chắn đang kẹt cứng!
+	if current_state in [State.MOVING_TO_TARGET, State.MOVING_TO_BASE_FOR_WOOD, State.RETURNING_TO_BASE, State.WORKING]:
+		if velocity.length() > 0.0 and get_real_velocity().length() < 5.0:
+			print("⚠️ [NÔNG DÂN] Kẹt góc/Viền map! Hủy đường đi hiện tại để AI tính lại.")
+			velocity = Vector2.ZERO
+			current_path.clear()
+			current_state = State.IDLE				
 func request_path(target_pos: Vector2) -> void:
 	if grid_manager:
 		current_path = grid_manager.get_path_for_ant(global_position, target_pos)

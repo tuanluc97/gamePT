@@ -95,12 +95,18 @@ func _input(event: InputEvent) -> void:
 				uis[0].switch_context("base")
 				
 func spawn_worker() -> void:
+	# BẢN VÁ LỖI: Tự động nạp file nếu Nhà chính được sinh ra bằng code
+	if worker_scene == null:
+		worker_scene = load("res://scenes/worker.tscn")
+		
 	if worker_scene:
 		var worker = worker_scene.instantiate()
 		worker.global_position = $SpawnPoint.global_position
 		get_parent().add_child(worker)
-		print("Đã xin 1 Nông dân!")
-
+		# BẰNG CHỨNG LOG: Xác minh nông dân đã được sinh ra trên sân
+		print("🏰 [NHÀ CHÍNH] Đã xin 1 Nông dân tại tọa độ: ", worker.global_position)
+	else:
+		print("🚨 [LỖI] Vẫn không tìm thấy file worker.tscn để sinh Kiến!")
 func add_resource(type: String, amount: int) -> void:
 	if type == "gold":
 		gold_storage += amount

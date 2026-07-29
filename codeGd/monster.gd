@@ -33,25 +33,23 @@ func _ready() -> void:
 # CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE monster.gd
 # CHỈ SỬA 2 HÀM NÀY TRONG FILE monster.gd
 
-func setup(type: int) -> void:
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE monster.gd
+func setup(type_name: String, stats: Dictionary) -> void:
 	if not is_node_ready():
 		await ready
 		
-	monster_type = type as MonsterType
-	if color_rect: color_rect.visible = false 
-	
-	if monster_type == MonsterType.FAST:
-		speed = 150.0
-		max_hp = 30.0
-		attack_damage = 1.0 # BẢN VÁ: Quái nhanh dame 1
-		scale = Vector2(0.8, 0.8)
-	elif monster_type == MonsterType.TANK:
-		speed = 60.0
-		max_hp = 120.0
-		attack_damage = 2.0 # BẢN VÁ: Quái trâu dame 2
-		scale = Vector2(1.3, 1.3)
+	if type_name == "tank":
+		monster_type = MonsterType.TANK
+	else:
+		monster_type = MonsterType.FAST
 		
+	# Ghi đè các chỉ số bằng dữ liệu đọc từ JSON
+	speed = stats.get("speed", speed)
+	max_hp = stats.get("hp", max_hp)
 	current_hp = max_hp
+	attack_damage = stats.get("dps", attack_damage)
+	
+	print("⚙️ [QUÁI VẬT SETUP] Loại: ", type_name, " | Máu: ", current_hp, " | Tốc độ: ", speed)
 	queue_redraw()
 
 func _move_along_path() -> void:

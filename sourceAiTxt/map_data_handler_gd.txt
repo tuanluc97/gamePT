@@ -33,3 +33,16 @@ static func load_map(filename: String) -> Dictionary:
 	else:
 		print("🚨 [MAP HANDLER] LỖI parse JSON tại dòng ", json.get_error_line(), ": ", json.get_error_message())
 		return {}
+# THÊM HÀM NÀY VÀO CUỐI FILE map_data_handler.gd
+static func get_saved_maps() -> Array[String]:
+	var maps: Array[String] = []
+	if DirAccess.dir_exists_absolute(SAVE_DIR):
+		var dir = DirAccess.open(SAVE_DIR)
+		dir.list_dir_begin()
+		var file_name = dir.get_next()
+		while file_name != "":
+			if not dir.current_is_dir() and file_name.ends_with(".json"):
+				maps.append(file_name.replace(".json", ""))
+			file_name = dir.get_next()
+	print("📂 [MAP HANDLER] Đã tìm thấy ", maps.size(), " maps đã lưu.")
+	return maps

@@ -7,7 +7,7 @@ var wave_timer: float = 0.0
 var wave_interval: float = 100.0
 var current_wave: int = 0
 @export var monster_scene: PackedScene
-
+var monster_spawn_points: Array[Vector2] = []
 var wave_data: Array = []
 var is_spawning_wave: bool = false
 var spawn_queue: Array = []
@@ -92,31 +92,36 @@ func _start_monster_wave() -> void:
 	Global.log_event.emit("alert", "WAVE " + str(current_wave) + " BẮT ĐẦU: " + str(total_count) + " Quái vật đang tới!")
 	# BẰNG CHỨNG LOG:
 	print("☠️ [WAVE ", current_wave, "] Đã nạp ", total_count, " quái vật vào hàng chờ.")
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE main.gd
 func _spawn_single_monster() -> void:
 	if spawn_queue.size() == 0:
 		is_spawning_wave = false
 		print("✅ [WAVE ", current_wave, "] Đã sinh xong toàn bộ quái vật.")
 		return
 		
-	# Lấy con quái tiếp theo ra (Bao gồm type_name và stats)
 	var next_monster_data = spawn_queue.pop_front() 
 	
 	if monster_scene:
 		var monster = monster_scene.instantiate()
-		var corners = [
-			Vector2(-1000, -1000), Vector2(1000, -1000),
-			Vector2(-1000, 1000), Vector2(1000, 1000)
-		]
-		monster.global_position = corners[randi() % corners.size()]
 		
-		# BẢN VÁ: Truyền cục dữ liệu cấu hình sang cho quái vật tự xử lý
-		get_parent().add_child(monster)
+		if monster_spawn_points.size() > 0:
+			monster.global_position = monster_spawn_points[randi() % monster_spawn_points.size()]
+		else:
+			var corners = [
+				Vector2(-1000, -1000), Vector2(1000, -1000),
+				Vector2(-1000, 1000), Vector2(1000, 1000)
+			]
+			monster.global_position = corners[randi() % corners.size()]
+		
+		# BẢN VÁ LỖI 1: Bỏ get_parent() đi, thêm quái trực tiếp làm con của màn chơi hiện tại
+		add_child(monster)
 		monster.setup(next_monster_data["type_name"], next_monster_data["stats"])
 		
-		print("🦇 [SPAWN] Đã sinh 1 quái [", next_monster_data["type_name"], "]. Còn lại: ", spawn_queue.size())
+		# BẰNG CHỨNG LOG: Xác minh cha của quái vật là ai và tọa độ là bao nhiêu
+		print("🦇 [SPAWN] Quái [", next_monster_data["type_name"], "] sinh tại: ", monster.global_position, " | Trực thuộc Node: ", monster.get_parent().name)
 func _build_map_from_editor_data() -> void:
 	if Global.get("current_map_to_play") == null or Global.current_map_to_play == "":
-		print("⚠️ [MAIN] Không có map được chọn. Sử dụng map mặc định trên Editor.")
+		print("⚠️ [MAIN] Không có map được chọn. Sử dụng map mặc định.")
 		return
 		
 	var map_data = MapDataHandler.load_map(Global.current_map_to_play)
@@ -124,28 +129,49 @@ func _build_map_from_editor_data() -> void:
 	
 	print("🗺️ [MAIN] Đang dựng địa hình từ dữ liệu: ", Global.current_map_to_play)
 	
-	# Xóa các Node cứng trên Scene cũ (Để nhường chỗ cho đồ từ JSON)
+	var grids = get_tree().get_nodes_in_group("grid_manager")
+	if grids.size() > 0 and grids[0].has_method("setup_map_size"):
+		var w = map_data.get("map_width", 2000)
+		var h = map_data.get("map_height", 2000)
+		grids[0].setup_map_size(w, h)
+	
 	for node_name in ["base", "GoldNode", "WoodNode"]:
 		var old_node = get_node_or_null(node_name)
 		if old_node: old_node.queue_free()
 		
-	# Tải file gốc
 	var base_scene = load("res://scenes/base.tscn")
 	var gold_scene = load("res://scenes/gold_node.tscn")
 	var wood_scene = load("res://scenes/wood_node.tscn")
 	
-	# Dựng Nhà Chính
 	if map_data.has("bases"):
 		for b in map_data["bases"]:
 			var base_inst = base_scene.instantiate()
 			base_inst.global_position = Vector2(b.x, b.y)
 			add_child(base_inst)
-			print("🏰 [MAIN] Sinh Nhà chính tại: ", base_inst.global_position)
 			
-	# Dựng Tài nguyên
 	if map_data.has("resources"):
 		for r in map_data["resources"]:
 			var res_inst = gold_scene.instantiate() if r.type == "gold" else wood_scene.instantiate()
 			res_inst.global_position = Vector2(r.x, r.y)
 			add_child(res_inst)
-			print("💎 [MAIN] Sinh Mỏ (", r.type, ") tại: ", res_inst.global_position)
+			
+	# BẢN VÁ: Nạp danh sách điểm sinh quái từ file JSON
+	monster_spawn_points.clear()
+	if map_data.has("spawns") and map_data["spawns"].size() > 0:
+		for s in map_data["spawns"]:
+			var pt = Vector2(s.x, s.y)
+			monster_spawn_points.append(pt)
+			print("📍 [MAIN] Đã nạp điểm sinh quái tại: ", pt)
+	var obstacle_scene = load("res://scenes/obstacle.tscn")
+	if map_data.has("obstacles") and obstacle_scene != null:
+		for obs in map_data["obstacles"]:
+			var obs_inst = obstacle_scene.instantiate()
+			obs_inst.global_position = Vector2(obs.x, obs.y)
+			add_child(obs_inst)
+			# BẰNG CHỨNG LOG: Xác minh đá được sinh ra
+			print("🪨 [MAIN] Sinh Đá/Vật cản tại: ", obs_inst.global_position)
+	if map_data.has("hero") and map_data["hero"].size() > 0:
+		var hero_node = get_node_or_null("Hero")
+		if hero_node:
+			hero_node.global_position = Vector2(map_data["hero"][0].x, map_data["hero"][0].y)
+			print("🦸 [MAIN] Đã dịch chuyển Hero đến vị trí chuẩn: ", hero_node.global_position)

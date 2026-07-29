@@ -2,104 +2,200 @@ extends Node2D
 
 var grid_size: float = 32.0
 var current_tool: String = "base"
+var camera: Camera2D
+var cam_speed: float = 600.0
 
-# Cấu trúc Map Dictionary siêu nhẹ, tách biệt hoàn toàn khỏi logic Game
 var map_data: Dictionary = {
-	"map_name": "Level 1",
+	"map_name": "NewMap",
 	"map_width": 2000,
 	"map_height": 2000,
-	"bases": [],
-	"spawns": [],
-	"resources": [],
-	"obstacles": []
+	"bases": [], "spawns": [], "resources": [], "obstacles": []
 }
 
-func _ready() -> void:
-	_build_editor_ui()
-	print("🗺️ [MAP EDITOR] Đã khởi động! Chế độ vẽ hiện tại: ", current_tool)
+# Tham chiếu giao diện
+var name_input: LineEdit
+var w_input: SpinBox
+var h_input: SpinBox
 
-# UI Code-based: Không cần Editor thiết lập lằng nhằng, tự sinh giao diện khi chạy
+func _ready() -> void:
+	# Tạo Camera di chuyển tự do
+	camera = Camera2D.new()
+	add_child(camera)
+	
+	# Nhận dữ liệu nếu Load từ Menu
+	if Global.get("map_to_edit") != null and Global.map_to_edit != "":
+		var loaded = MapDataHandler.load_map(Global.map_to_edit)
+		if not loaded.is_empty():
+			map_data = loaded
+			print("🗺️ [MAP EDITOR] Đã load map: ", Global.map_to_edit)
+			
+	_build_editor_ui()
+
+# Xử lý di chuyển Camera bằng WASD / Mũi tên
+func _process(delta: float) -> void:
+	var dir = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	if dir != Vector2.ZERO:
+		camera.position += dir * cam_speed * delta
+
+# UI cấu hình Map
 func _build_editor_ui() -> void:
 	var canvas = CanvasLayer.new()
 	add_child(canvas)
-	
 	var panel = PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	canvas.add_child(panel)
+	var vbox = VBoxContainer.new()
+	panel.add_child(vbox)
 	
-	var hbox = HBoxContainer.new()
-	panel.add_child(hbox)
+	# Hàng 1: Cài đặt thông số Map
+	var top_row = HBoxContainer.new()
+	vbox.add_child(top_row)
 	
-	var tools = ["base", "gold", "wood", "spawn", "obstacle"]
+	var lbl_name = Label.new(); lbl_name.text = " Tên Map:"
+	top_row.add_child(lbl_name)
+	name_input = LineEdit.new()
+	name_input.text = map_data["map_name"]
+	name_input.custom_minimum_size.x = 150
+	top_row.add_child(name_input)
+	
+	var lbl_w = Label.new(); lbl_w.text = " Rộng:"
+	top_row.add_child(lbl_w)
+	w_input = SpinBox.new(); w_input.max_value = 10000; w_input.step = 32; w_input.min_value = 320
+	w_input.value = map_data["map_width"]
+	top_row.add_child(w_input)
+	
+	var lbl_h = Label.new(); lbl_h.text = " Cao:"
+	top_row.add_child(lbl_h)
+	h_input = SpinBox.new(); h_input.max_value = 10000; h_input.step = 32; h_input.min_value = 320
+	h_input.value = map_data["map_height"]
+	top_row.add_child(h_input)
+	
+	var save_btn = Button.new()
+	save_btn.text = "💾 LƯU MAP"
+	save_btn.modulate = Color.GREEN
+	save_btn.pressed.connect(_save_map_from_ui)
+	top_row.add_child(save_btn)
+	
+	var exit_btn = Button.new()
+	exit_btn.text = "❌ Về Menu"
+	exit_btn.modulate = Color.RED
+	exit_btn.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/menu.tscn"))
+	top_row.add_child(exit_btn)
+
+	# Hàng 2: Nút công cụ (Bút vẽ)
+	var tools_row = HBoxContainer.new()
+	vbox.add_child(tools_row)
+	var tools = ["base", "gold", "wood", "spawn", "obstacle", "hero"]
 	for t in tools:
 		var btn = Button.new()
-		btn.text = "✏️ Đặt " + t.capitalize()
-		btn.pressed.connect(func():
-			current_tool = t
-			print("🧰 [MAP EDITOR] Đã đổi công cụ sang: ", t)
-		)
-		hbox.add_child(btn)
-		
-	var save_btn = Button.new()
-	save_btn.text = "💾 LƯU THÀNH FILE JSON"
-	save_btn.modulate = Color.GREEN
-	save_btn.pressed.connect(func(): MapDataHandler.save_map("level_1", map_data))
-	hbox.add_child(save_btn)
+		btn.text = "✏️ Đặt " + t
+		btn.pressed.connect(func(): current_tool = t; print("🧰 [EDITOR] Chọn công cụ: ", t))
+		tools_row.add_child(btn)
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE map_editor.gd
+func _save_map_from_ui() -> void:
+	map_data["map_name"] = name_input.text
+	
+	# BẢN VÁ: Làm tròn kích thước về bội số của 32 (grid_size) và tối thiểu 320px
+	var normalized_w = max(320, int(round(w_input.value / grid_size)) * int(grid_size))
+	var normalized_h = max(320, int(round(h_input.value / grid_size)) * int(grid_size))
+	
+	w_input.value = normalized_w
+	h_input.value = normalized_h
+	
+	map_data["map_width"] = normalized_w
+	map_data["map_height"] = normalized_h
+	
+	MapDataHandler.save_map(name_input.text, map_data)
+	print("📐 [MAP EDITOR] Đã chuẩn hóa kích thước Map: ", normalized_w, "x", normalized_h, " (Chia hết cho 32)")
+	queue_redraw()
+
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE map_editor.gd
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
 		var mouse_pos = get_global_mouse_position()
-		# Snap lưới chuẩn xác như cách làm ở grid_map.gd
-		var snap_pos = (mouse_pos / grid_size).floor() * grid_size + Vector2(grid_size/2, grid_size/2)
+		
+		# BẢN VÁ: 
+		# - Nếu chọn Đặt Base (64x64 = 2x2 ô): snap vào giao điểm đường lưới (bội số của 32)
+		# - Vật thể 32x32 khác: snap vào tâm ô đơn
+		var snap_pos: Vector2
+		if current_tool == "base":
+			snap_pos = (mouse_pos / grid_size).round() * grid_size
+		else:
+			snap_pos = (mouse_pos / grid_size).floor() * grid_size + Vector2(grid_size / 2.0, grid_size / 2.0)
+		
+		var half_w = int(w_input.value) / 2.0
+		var half_h = int(h_input.value) / 2.0
+		if abs(snap_pos.x) > half_w or abs(snap_pos.y) > half_h: return
 		
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			_remove_item_at(snap_pos) # Đảm bảo 1 ô không bị đè 2 vật thể
+			_remove_item_at(snap_pos)
 			_place_item(snap_pos)
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			_remove_item_at(snap_pos)
-			print("🗑️ [MAP EDITOR] Đã xóa vật thể tại: ", snap_pos)
-			
-		queue_redraw() # Gọi _draw() vẽ lại màn hình
+		queue_redraw()
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE map_editor.gd
 func _place_item(snap_pos: Vector2) -> void:
 	var dict_pos = {"x": snap_pos.x, "y": snap_pos.y}
+	
+	# Khởi tạo mảng lưu hero nếu chưa có
+	if not map_data.has("hero"): map_data["hero"] = []
+		
 	match current_tool:
 		"base": map_data["bases"].append(dict_pos)
 		"spawn": map_data["spawns"].append(dict_pos)
 		"obstacle": map_data["obstacles"].append(dict_pos)
+		"hero":
+			# TÍNH NĂNG ĐỘC TÔN: Xóa điểm Hero cũ trước khi đặt điểm mới
+			map_data["hero"].clear()
+			map_data["hero"].append(dict_pos)
+			print("🦸 [MAP EDITOR] Đã dời điểm sinh Hero đến: ", snap_pos)
 		"gold", "wood": map_data["resources"].append({"type": current_tool, "x": snap_pos.x, "y": snap_pos.y})
 		
-	print("✅ [MAP EDITOR] Đã đặt [", current_tool, "] tại ", snap_pos)
+	print("✅ [EDITOR] Đặt [", current_tool, "] tại ", snap_pos)
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE map_editor.gd
 func _remove_item_at(snap_pos: Vector2) -> void:
 	var dict_pos = {"x": snap_pos.x, "y": snap_pos.y}
-	map_data["bases"].erase(dict_pos)
 	map_data["spawns"].erase(dict_pos)
 	map_data["obstacles"].erase(dict_pos)
 	
-	# Xóa mảng phức hợp (tài nguyên)
+	# BẢN VÁ: Xóa cả Hero nếu click chuột phải trúng
+	if map_data.has("hero"): map_data["hero"].erase(dict_pos)
+	
+	for i in range(map_data["bases"].size() - 1, -1, -1):
+		var b = map_data["bases"][i]
+		if abs(b.x - snap_pos.x) < grid_size and abs(b.y - snap_pos.y) < grid_size:
+			map_data["bases"].remove_at(i)
+			
 	for i in range(map_data["resources"].size() - 1, -1, -1):
 		var r = map_data["resources"][i]
 		if r["x"] == snap_pos.x and r["y"] == snap_pos.y:
 			map_data["resources"].remove_at(i)
 
-# Chỉ dùng các khối màu tượng trưng để thiết kế cho cực nhẹ, không sinh Scene tốn CPU
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE map_editor.gd
 func _draw() -> void:
-	# Vẽ lưới nền mờ
-	var half_w = map_data["map_width"] / 2
-	var half_h = map_data["map_height"] / 2
+	var half_w = int(w_input.value) / 2.0 if w_input else map_data["map_width"] / 2.0
+	var half_h = int(h_input.value) / 2.0 if h_input else map_data["map_height"] / 2.0
+	
+	# Vẽ biên giới Map (Màu đỏ)
+	draw_rect(Rect2(-half_w, -half_h, half_w * 2, half_h * 2), Color.RED, false, 2.0)
+	
+	# Vẽ lưới nền
 	for x in range(int(-half_w/grid_size), int(half_w/grid_size) + 1):
 		draw_line(Vector2(x * grid_size, -half_h), Vector2(x * grid_size, half_h), Color(1, 1, 1, 0.1))
 	for y in range(int(-half_h/grid_size), int(half_h/grid_size) + 1):
 		draw_line(Vector2(-half_w, y * grid_size), Vector2(half_w, y * grid_size), Color(1, 1, 1, 0.1))
 		
 	var hs = grid_size / 2.0
-	for b in map_data["bases"]:
-		draw_rect(Rect2(b.x - hs, b.y - hs, grid_size, grid_size), Color.CYAN)
-	for s in map_data["spawns"]:
-		draw_rect(Rect2(s.x - hs, s.y - hs, grid_size, grid_size), Color.MAGENTA)
-	for o in map_data["obstacles"]:
-		draw_rect(Rect2(o.x - hs, o.y - hs, grid_size, grid_size), Color.GRAY)
+	
+	# BẢN VÁ: Vẽ Base chuẩn 64x64 (grid_size * 2 = 64px), chiếm vừa khít 4 ô vuông nhỏ (2x2)
+	for b in map_data["bases"]: 
+		draw_rect(Rect2(b.x - grid_size, b.y - grid_size, grid_size * 2, grid_size * 2), Color.CYAN)
+		
+	for s in map_data["spawns"]: draw_rect(Rect2(s.x - hs, s.y - hs, grid_size, grid_size), Color.MAGENTA)
+	for o in map_data["obstacles"]: draw_rect(Rect2(o.x - hs, o.y - hs, grid_size, grid_size), Color.GRAY)
 	for r in map_data["resources"]:
 		var c = Color.YELLOW if r.type == "gold" else Color.DARK_GREEN
 		draw_rect(Rect2(r.x - hs, r.y - hs, grid_size, grid_size), c)

@@ -19,4 +19,4 @@ color = Color(0.16078432, 1, 1, 1)
 shape = SubResource("RectangleShape2D_1vivr")
 
 [node name="SpawnPoint" type="Marker2D" parent="." unique_id=524218976]
-position = Vector2(16, 48)
+position = Vector2(16, 60)

@@ -40,12 +40,35 @@ func _ready() -> void:
 	
 	# BẢN VÁ TÀI NGUYÊN: Tự động kết nối tới Nhà Chính để nhận cập nhật Vàng/Gỗ
 	call_deferred("_connect_to_main_base")
-func switch_context(context_name: String) -> void:
-	print("🎛️ [UI HỢP NHẤT] Chuyển đổi Menu sang ngữ cảnh: ", context_name)
-	if default_menu: default_menu.visible = (context_name == "default")
-	if base_menu: base_menu.visible = (context_name == "base")
-	if tower_menu: tower_menu.visible = (context_name == "tower")
-	if hero_menu: hero_menu.visible = (context_name == "hero")
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE unified_ui.gd
+func switch_context(menu_type: String, info_title: String = "", info_details: String = "") -> void:
+	if default_menu: default_menu.hide()
+	if base_menu: base_menu.hide()
+	if tower_menu: tower_menu.hide()
+	if hero_menu: hero_menu.hide()
+	
+	# BẢN VÁ LỖI 1: Luôn tắt chế độ xây dựng trên GridMap khi chuyển sang ngữ cảnh khác
+	var grid = get_tree().get_nodes_in_group("grid_manager")
+	if grid.size() > 0 and grid[0].has_method("select_building_type"):
+		grid[0].select_building_type("none")
+		
+	match menu_type:
+		"base":
+			if base_menu: base_menu.show()
+			print("🎛️ [UI] Mở Menu Căn Cứ")
+		"tower", "info":
+			if tower_menu:
+				tower_menu.show()
+				var info_label = tower_menu.get_node_or_null("TowerInfoLabel")
+				if info_label and info_title != "":
+					info_label.text = info_title + "\n" + info_details
+			print("🎛️ [UI] Mở Bảng Thông Tin: ", info_title)
+		"hero":
+			if hero_menu: hero_menu.show()
+			print("🎛️ [UI] Mở Menu Hero")
+		_:
+			if default_menu: default_menu.show()
+			print("🎛️ [UI] Trở về Menu Xây Dựng Mặc Định")
 	
 func update_buy_queue(queue_count: int) -> void:
 	if buy_worker_btn:

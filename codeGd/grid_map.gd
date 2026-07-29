@@ -29,23 +29,35 @@ func _ready() -> void:
 	call_deferred("_spawn_random_wood_nodes", 20)
 	queue_redraw()
 	select_building_type("tower")
-# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
 func _create_world_boundaries() -> void:
 	var bounds = StaticBody2D.new()
-	# Mở rộng bản đồ ra 4000x4000 px (Gấp đôi kích thước cũ)
-	var rect = Rect2(-2000, -2000, 4000, 4000) 
+	bounds.name = "WorldBounds"
 	
-	var shapes = [SegmentShape2D.new(), SegmentShape2D.new(), SegmentShape2D.new(), SegmentShape2D.new()]
-	shapes[0].a = rect.position; shapes[0].b = Vector2(rect.end.x, rect.position.y) # Bức tường Trên
-	shapes[1].a = shapes[0].b; shapes[1].b = rect.end # Bức tường Phải
-	shapes[2].a = rect.end; shapes[2].b = Vector2(rect.position.x, rect.end.y) # Bức tường Dưới
-	shapes[3].a = shapes[2].b; shapes[3].b = rect.position # Bức tường Trái
+	var rect = Rect2(offset_x, offset_y, map_width, map_height)
+	var thickness = 60.0
+	
+	# BẢN VÁ: Khi dời gốc tọa độ về (0,0), tâm Y của Tường Trái/Phải là chính giữa map (rect.size.y / 2)
+	var center_x = rect.size.x / 2.0
+	var center_y = rect.size.y / 2.0
+	
+	var shapes = [
+		[Vector2(rect.position.x - thickness/2.0, center_y), Vector2(thickness, rect.size.y)], # Trái
+		[Vector2(rect.end.x + thickness/2.0, center_y), Vector2(thickness, rect.size.y)],      # Phải
+		[Vector2(center_x, rect.position.y - thickness/2.0), Vector2(rect.size.x + thickness*2.0, thickness)], # Trên
+		[Vector2(center_x, rect.end.y + thickness/2.0), Vector2(rect.size.x + thickness*2.0, thickness)]       # Dưới
+	]
 	
 	for s in shapes:
-		var col = CollisionShape2D.new()
-		col.shape = s
-		bounds.add_child(col)
+		var coll = CollisionShape2D.new()
+		var rect_shape = RectangleShape2D.new()
+		rect_shape.size = s[1]
+		coll.shape = rect_shape
+		coll.position = s[0]
+		bounds.add_child(coll)
+		
 	add_child(bounds)
+	print("🚧 [GRID MAP DEBUG] Đã dựng tường bao quanh khung: (0,0) -> (", map_width, ",", map_height, ")")
+	
 func _debug_check_objects() -> void:
 	var bases = get_tree().get_nodes_in_group("main_base")
 	if bases.size() > 0:
@@ -107,32 +119,20 @@ func _debug_check_base_position() -> void:
 
 # --- VẼ GIAO DIỆN DEBUG ---
 # CHỈ THAY THẾ ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE grid_map.gd
 func _draw() -> void:
-	var color = Color(1.0, 1.0, 1.0, 0.4) 
-	var draw_limit = 500 
+	print("\n--- [DEBUG GRID] BẮT ĐẦU VẼ VIỀN MAP ---")
 	
-	print("\n--- [DEBUG GRID] BẮT ĐẦU VẼ LƯỚI ---")
+	# Vẽ một viền màu Đen ôm SÁT LỀ ngoài bản đồ (dùng hàm grow để đẩy độ dày 7.5 ra ngoài, không lẹm vào lưới)
+	var map_rect = Rect2(offset_x, offset_y, map_width, map_height)
+	var outer_rect = map_rect.grow(7.5) 
+	draw_rect(outer_rect, Color.BLACK, false, 15.0)
 	
-	# In log các mốc tọa độ đường kẻ dọc xung quanh khu vực Nhà chính (từ 192 đến 448)
-	for x in range(192, 450, int(grid_size)):
-		draw_line(Vector2(x, -draw_limit), Vector2(x, draw_limit), color, 1.0)
-		
-	for y in range(192, 450, int(grid_size)):
-		draw_line(Vector2(-draw_limit, y), Vector2(draw_limit, y), color, 1.0)
-
-	# In log ranh giới hình ảnh thực tế của Nhà chính để đối chiếu với lưới
 	for b in get_tree().get_nodes_in_group("main_base"):
-		var left_edge = b.global_position.x - 32.0
-		var right_edge = b.global_position.x + 32.0
 		draw_circle(b.global_position, 5.0, Color.RED)
-		# THÊM ĐOẠN NÀY VÀO CUỐI HÀM _draw() TRONG FILE grid_map.gd
-	# Vẽ khung viền giới hạn bản đồ màu đen (Ví dụ kích thước map từ -2000 đến 2000)
-	var map_rect = Rect2(-2000, -2000, 4000, 4000)
-	draw_rect(map_rect, Color.BLACK, false, 4.0) # Viền đen dày 4px
-
-# ====================================================================
-# CÁC HÀM CỐT LÕI (BẮT BUỘC PHẢI CÓ)
-# ====================================================================
+		
+	print("🖌️ [GRID MAP DEBUG] Vùng chơi thực tế an toàn: ", map_rect)
 
 # Chuyển đổi Pixel sang Ô Lưới
 func local_to_map(pos: Vector2) -> Vector2i:
@@ -415,3 +415,17 @@ func _maintain_gold_supply() -> void:
 				
 				# LOG BẰNG CHỨNG
 				print("🪙 [TÀI NGUYÊN] Đã sinh mỏ Vàng mới (+", rand_val, ") tại: ", rand_pos, " | Tổng Vàng toàn map: ", _get_total_gold_on_map(), "/", max_cap)
+# THÊM HÀM NÀY VÀO CUỐI FILE grid_map.gd
+func setup_map_size(w: int, h: int) -> void:
+	map_width = w
+	map_height = h
+	# BẢN VÁ: Dời Gốc Tọa Độ (Anchor) về chuẩn (0,0) thay vì tâm map!
+	offset_x = 0
+	offset_y = 0
+	print("📏 [GRID MAP] Kích thước lưới được cập nhật: ", w, "x", h, " | Gốc Tọa Độ: (0,0)")
+	
+	for child in get_children():
+		if child is StaticBody2D: 
+			child.queue_free()
+	_create_world_boundaries()
+	queue_redraw()
