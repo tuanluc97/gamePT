@@ -17,6 +17,7 @@ func _ready() -> void:
 	wave_interval = Global.wave_interval
 	print("--- GAME PHÒNG THỦ BẮT ĐẦU --- | Wave Timer: ", wave_interval, "s")
 	_load_wave_data() # Đọc file JSON lúc khởi động
+	_build_map_from_editor_data()
 		
 func _on_game_over() -> void:
 	print("🛑 [MAIN] NHẬN LỆNH GAME OVER! Tạm dừng (Pause) toàn bộ Game!")
@@ -113,3 +114,38 @@ func _spawn_single_monster() -> void:
 		monster.setup(next_monster_data["type_name"], next_monster_data["stats"])
 		
 		print("🦇 [SPAWN] Đã sinh 1 quái [", next_monster_data["type_name"], "]. Còn lại: ", spawn_queue.size())
+func _build_map_from_editor_data() -> void:
+	if Global.get("current_map_to_play") == null or Global.current_map_to_play == "":
+		print("⚠️ [MAIN] Không có map được chọn. Sử dụng map mặc định trên Editor.")
+		return
+		
+	var map_data = MapDataHandler.load_map(Global.current_map_to_play)
+	if map_data.is_empty(): return
+	
+	print("🗺️ [MAIN] Đang dựng địa hình từ dữ liệu: ", Global.current_map_to_play)
+	
+	# Xóa các Node cứng trên Scene cũ (Để nhường chỗ cho đồ từ JSON)
+	for node_name in ["base", "GoldNode", "WoodNode"]:
+		var old_node = get_node_or_null(node_name)
+		if old_node: old_node.queue_free()
+		
+	# Tải file gốc
+	var base_scene = load("res://scenes/base.tscn")
+	var gold_scene = load("res://scenes/gold_node.tscn")
+	var wood_scene = load("res://scenes/wood_node.tscn")
+	
+	# Dựng Nhà Chính
+	if map_data.has("bases"):
+		for b in map_data["bases"]:
+			var base_inst = base_scene.instantiate()
+			base_inst.global_position = Vector2(b.x, b.y)
+			add_child(base_inst)
+			print("🏰 [MAIN] Sinh Nhà chính tại: ", base_inst.global_position)
+			
+	# Dựng Tài nguyên
+	if map_data.has("resources"):
+		for r in map_data["resources"]:
+			var res_inst = gold_scene.instantiate() if r.type == "gold" else wood_scene.instantiate()
+			res_inst.global_position = Vector2(r.x, r.y)
+			add_child(res_inst)
+			print("💎 [MAIN] Sinh Mỏ (", r.type, ") tại: ", res_inst.global_position)

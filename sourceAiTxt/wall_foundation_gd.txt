@@ -26,15 +26,21 @@ func build(amount: float) -> void:
 	if current_build_progress >= max_build_progress:
 		finish_construction()
 
+# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE wall_foundation.gd
 func finish_construction() -> void:
 	if real_wall_scene:
 		var real_wall = real_wall_scene.instantiate()
 		real_wall.global_position = global_position
 		get_parent().add_child(real_wall)
 		Global.log_event.emit("build", "Đã hoàn thành một công trình!")
-		# Báo cho BuildManager biết để bít đường A*
+		
+		# BẢN VÁ LỖI: Kiểm tra xem công trình vừa xây xong có phải là Bẫy không
+		var is_trap = ("Trap" in name) or real_wall.is_in_group("traps")
+		
+		# Báo cho GridMap biết để bít đường A* LẠI
 		var grids = get_tree().get_nodes_in_group("grid_manager")
 		if grids.size() > 0:
-			grids[0].update_wall_obstacle(global_position, true)
+			grids[0].update_wall_obstacle(global_position, true, is_trap)
+			print("🚧 [HOÀN THÀNH XÂY DỰNG] Nhà đã mọc lên! Đóng đường A*. Bẫy: ", is_trap)
 			
-	queue_free()
+		queue_free() # Hủy cái móng đi

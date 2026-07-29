@@ -327,19 +327,33 @@ func start_harvesting() -> void:
 func _on_harvest_finished() -> void:
 	if current_job == Job.GOLD_MINER and is_instance_valid(target_gold_node):
 		if target_gold_node.has_method("harvest"):
-			var amt = target_gold_node.harvest(Global.worker_harvest_amt)
-			carried_gold = min(amt, Global.worker_carry_cap) # Ép giới hạn túi đồ
-		_return_to_base()
-		
+			# Tính khoảng trống còn lại trong túi để không lấy lố
+			var space_left = Global.worker_carry_cap - carried_gold
+			var amt_to_harvest = min(Global.worker_harvest_amt, space_left)
+			
+			var amt = target_gold_node.harvest(amt_to_harvest)
+			carried_gold += amt # Cộng dồn thay vì gán đè
+			print("⛏️ [NÔNG DÂN] Đã đào ", amt, " Vàng. Túi hiện tại: ", carried_gold, "/", Global.worker_carry_cap)
+			
+			# Kiểm tra xem đầy túi chưa hoặc mỏ đã cạn chưa
+			if carried_gold >= Global.worker_carry_cap or not is_instance_valid(target_gold_node):
+				_return_to_base()
+			else:
+				harvest_timer.start() # Chưa đầy thì ở lại đào tiếp
+				
 	elif current_job == Job.WOOD_CHOPPER and is_instance_valid(target_wood_node):
 		if target_wood_node.has_method("harvest"):
-			var amt = target_wood_node.harvest(Global.worker_harvest_amt)
-			carried_wood = min(amt, Global.worker_carry_cap) # Ép giới hạn túi đồ
-		_return_to_base()
-		
-	else:
-		current_state = State.IDLE
-# CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE worker.gd
+			# Logic tương tự cho việc chặt Gỗ
+			var space_left = Global.worker_carry_cap - carried_wood
+			var amt_to_harvest = min(Global.worker_harvest_amt, space_left)
+			
+			var amt = target_wood_node.harvest(amt_to_harvest)
+			carried_wood += amt
+			
+			if carried_wood >= Global.worker_carry_cap or not is_instance_valid(target_wood_node):
+				_return_to_base()
+			else:
+				harvest_timer.start() # Chưa đầy thì chặt tiếp
 func _return_to_base() -> void:
 	if main_base:
 		var spawn_pt = main_base.get_node_or_null("SpawnPoint")
@@ -347,7 +361,7 @@ func _return_to_base() -> void:
 		
 		#print("🪵 [BUG 2 DEBUG] Kiến đã chặt xong! Đang xin đường về nhà tại: ", target_pt)
 		request_path(target_pt)
-		#print("🪵 [BUG 2 DEBUG] Mảng đường đi về nhà có độ dài (Path Size): ", current_path.size())
+
 		
 		current_state = State.RETURNING_TO_BASE
 	else:
@@ -361,20 +375,30 @@ func deposit_resources() -> void:
 		if carried_wood > 0:
 			main_base.add_resource("wood", carried_wood)
 			carried_wood = 0
+			
 	current_state = State.IDLE
 
 func set_job(new_job: Job) -> void:
 	current_job = new_job
 	match new_job:
-		Job.WOOD_CHOPPER: agent_color = Color.CYAN
-		Job.BUILDER: agent_color = Color.YELLOW
-		Job.SCOUT: agent_color = Color.PINK
-		Job.NONE: agent_color = Color.GRAY
-		_: agent_color = Color.GREEN
-	queue_redraw() 
-	current_state = State.IDLE
-	evaluate_job()
-
+		Job.WOOD_CHOPPER:
+			agent_color = Color.CYAN
+		Job.BUILDER:
+			agent_color = Color.YELLOW
+		Job.GOLD_MINER:
+			agent_color = Color.GOLD
+		Job.SCOUT:
+			agent_color = Color.PINK
+		_:
+			agent_color = Color.WHITE
+			
+	# BẢN VÁ LỖI LOGIC: Kiểm tra 2 tay có đang cầm đồ hay không?
+	if carried_gold > 0 or carried_wood > 0:
+		print("🧑‍🌾 [NÔNG DÂN] Đổi việc sang ", new_job, " nhưng tay đang cầm (Vàng: ", carried_gold, ", Gỗ: ", carried_wood, "). Về cất trước!")
+		_return_to_base() # Bắt buộc đi về nhà trả đồ
+	else:
+		current_state = State.IDLE # Xóa việc cũ, rảnh tay để nhận lệnh tìm mỏ mới
+		current_path.clear()
 func evaluate_job() -> void:
 	current_state = State.IDLE
 	match current_job:

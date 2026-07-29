@@ -6,6 +6,8 @@
 size = Vector2(24, 24)
 
 [node name="Monster" type="CharacterBody2D" unique_id=926895966]
+collision_layer = 4
+collision_mask = 3
 script = ExtResource("1_uwnm8")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=819727608]

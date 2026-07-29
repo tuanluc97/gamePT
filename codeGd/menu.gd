@@ -18,7 +18,7 @@ extends Control
 @onready var speed_val_label: Label = $SettingsPanel/MarginContainer/SettingsVBox/SpeedRow/SpeedValue
 @onready var carry_val_label: Label = $SettingsPanel/MarginContainer/SettingsVBox/CarryRow/CarryValue
 @onready var harvest_val_label: Label = $SettingsPanel/MarginContainer/SettingsVBox/HarvestRow/HarvestValue
-
+var map_select_panel: PanelContainer
 # CHỈ SỬA ĐÚNG HÀM NÀY TRONG FILE menu.gd
 func _ready() -> void:
 	print("🎮 [MENU] Khởi tạo giao diện Menu thành công!")
@@ -44,13 +44,14 @@ func _ready() -> void:
 	
 	# Đồng bộ giá trị từ Global lên giao diện HSlider
 	_sync_ui_from_global()
-	
+	_setup_map_editor_ui()
 	# Kết nối tín hiệu khi kéo thanh trượt
 	hp_slider.value_changed.connect(_on_hp_changed)
 	wave_slider.value_changed.connect(_on_wave_changed)
 	speed_slider.value_changed.connect(_on_speed_changed)
 	carry_slider.value_changed.connect(_on_carry_changed)
 	harvest_slider.value_changed.connect(_on_harvest_changed)
+	
 func _sync_ui_from_global() -> void:
 	if typeof(Global) != TYPE_NIL:
 		hp_slider.value = Global.base_hp
@@ -94,5 +95,81 @@ func _on_harvest_changed(val: float) -> void:
 	print("⚙️ [CÀI ĐẶT] Lượng thu hoạch gán thành: ", val)
 
 func _on_start_pressed() -> void:
-	print("🚀 [MENU] BẮT ĐẦU GAME VỚI CÁC THÔNG SỐ ĐÃ TÙY CHỈNH!")
-	get_tree().change_scene_to_file("res://scenes/main.tscn")
+	print("▶️ [MENU] Mở giao diện chọn Map...")
+	main_menu_vbox.hide() # Ẩn menu chính
+	_show_map_selection_ui()
+	
+func _setup_map_editor_ui() -> void:
+	var map_hbox = HBoxContainer.new()
+	main_menu_vbox.add_child(map_hbox) # Thêm vào Menu chính
+	
+	var btn_create = Button.new()
+	btn_create.text = "➕ Tạo Map Mới"
+	btn_create.pressed.connect(func():
+		Global.map_to_edit = ""
+		get_tree().change_scene_to_file("res://scenes/map_editor.tscn")
+	)
+	map_hbox.add_child(btn_create)
+	
+	var map_list = MapDataHandler.get_saved_maps()
+	if map_list.size() > 0:
+		var opt_maps = OptionButton.new()
+		for m in map_list:
+			opt_maps.add_item(m)
+		map_hbox.add_child(opt_maps)
+		
+		var btn_load = Button.new()
+		btn_load.text = "✏️ Sửa Map"
+		btn_load.pressed.connect(func():
+			Global.map_to_edit = opt_maps.get_item_text(opt_maps.selected)
+			get_tree().change_scene_to_file("res://scenes/map_editor.tscn")
+		)
+		map_hbox.add_child(btn_load)
+		print("🗺️ [MENU] Đã load danh sách map vào Dropdown.")
+func _show_map_selection_ui() -> void:
+	if map_select_panel:
+		map_select_panel.show()
+		return
+		
+	map_select_panel = PanelContainer.new()
+	map_select_panel.set_anchors_preset(Control.PRESET_CENTER)
+	add_child(map_select_panel)
+	
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 15)
+	map_select_panel.add_child(vbox)
+	
+	var title = Label.new()
+	title.text = "🗺️ CHỌN BẢN ĐỒ ĐỂ CHƠI"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+	
+	var map_list = MapDataHandler.get_saved_maps()
+	if map_list.is_empty():
+		var err = Label.new()
+		err.text = "Chưa có map nào! Hãy vào Map Editor để tạo."
+		err.modulate = Color.RED
+		vbox.add_child(err)
+	else:
+		var opt_maps = OptionButton.new()
+		for m in map_list:
+			opt_maps.add_item(m)
+		vbox.add_child(opt_maps)
+		
+		var play_btn = Button.new()
+		play_btn.text = "⚔️ BẮT ĐẦU VÀO GAME"
+		play_btn.modulate = Color.GREEN
+		play_btn.pressed.connect(func():
+			Global.current_map_to_play = opt_maps.get_item_text(opt_maps.selected)
+			print("🚀 [MENU] Tiến hành load Map: ", Global.current_map_to_play)
+			get_tree().change_scene_to_file("res://scenes/main.tscn")
+		)
+		vbox.add_child(play_btn)
+		
+	var back_btn = Button.new()
+	back_btn.text = "🔙 Quay lại"
+	back_btn.pressed.connect(func():
+		map_select_panel.hide()
+		main_menu_vbox.show()
+	)
+	vbox.add_child(back_btn)

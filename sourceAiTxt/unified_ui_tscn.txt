@@ -11,6 +11,7 @@ offset_bottom = 40.0
 
 [node name="HBoxContainer" type="HBoxContainer" parent="ResourcePanel" unique_id=314391978]
 layout_mode = 2
+theme_override_constants/separation = 15
 
 [node name="GoldLabel" type="Label" parent="ResourcePanel/HBoxContainer" unique_id=1934614641]
 layout_mode = 2
@@ -49,13 +50,17 @@ grow_vertical = 2
 
 [node name="LogVBox" type="VBoxContainer" parent="BottomPanel/MainHBox" unique_id=554595612]
 layout_mode = 2
+size_flags_horizontal = 3
 
-[node name="RichTextLabel" type="RichTextLabel" parent="BottomPanel/MainHBox/LogVBox" unique_id=1599806854]
+[node name="LogText" type="RichTextLabel" parent="BottomPanel/MainHBox/LogVBox" unique_id=1599806854]
 layout_mode = 2
+size_flags_vertical = 3
 bbcode_enabled = true
 
 [node name="ContextVBox" type="VBoxContainer" parent="BottomPanel/MainHBox" unique_id=1415179805]
 layout_mode = 2
+size_flags_horizontal = 3
+alignment = 1
 
 [node name="DefaultMenu" type="VBoxContainer" parent="BottomPanel/MainHBox/ContextVBox" unique_id=808379065]
 layout_mode = 2
@@ -110,6 +115,7 @@ text = "Nâng cấp (100 Vàng)"
 
 [node name="MiniMapVBox" type="VBoxContainer" parent="BottomPanel/MainHBox" unique_id=1922277658]
 layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="MapPlaceholder" type="ColorRect" parent="BottomPanel/MainHBox/MiniMapVBox" unique_id=1253650948]
 layout_mode = 2

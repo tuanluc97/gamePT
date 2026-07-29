@@ -1,0 +1,105 @@
+extends Node2D
+
+var grid_size: float = 32.0
+var current_tool: String = "base"
+
+# Cấu trúc Map Dictionary siêu nhẹ, tách biệt hoàn toàn khỏi logic Game
+var map_data: Dictionary = {
+	"map_name": "Level 1",
+	"map_width": 2000,
+	"map_height": 2000,
+	"bases": [],
+	"spawns": [],
+	"resources": [],
+	"obstacles": []
+}
+
+func _ready() -> void:
+	_build_editor_ui()
+	print("🗺️ [MAP EDITOR] Đã khởi động! Chế độ vẽ hiện tại: ", current_tool)
+
+# UI Code-based: Không cần Editor thiết lập lằng nhằng, tự sinh giao diện khi chạy
+func _build_editor_ui() -> void:
+	var canvas = CanvasLayer.new()
+	add_child(canvas)
+	
+	var panel = PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	canvas.add_child(panel)
+	
+	var hbox = HBoxContainer.new()
+	panel.add_child(hbox)
+	
+	var tools = ["base", "gold", "wood", "spawn", "obstacle"]
+	for t in tools:
+		var btn = Button.new()
+		btn.text = "✏️ Đặt " + t.capitalize()
+		btn.pressed.connect(func():
+			current_tool = t
+			print("🧰 [MAP EDITOR] Đã đổi công cụ sang: ", t)
+		)
+		hbox.add_child(btn)
+		
+	var save_btn = Button.new()
+	save_btn.text = "💾 LƯU THÀNH FILE JSON"
+	save_btn.modulate = Color.GREEN
+	save_btn.pressed.connect(func(): MapDataHandler.save_map("level_1", map_data))
+	hbox.add_child(save_btn)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		var mouse_pos = get_global_mouse_position()
+		# Snap lưới chuẩn xác như cách làm ở grid_map.gd
+		var snap_pos = (mouse_pos / grid_size).floor() * grid_size + Vector2(grid_size/2, grid_size/2)
+		
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			_remove_item_at(snap_pos) # Đảm bảo 1 ô không bị đè 2 vật thể
+			_place_item(snap_pos)
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			_remove_item_at(snap_pos)
+			print("🗑️ [MAP EDITOR] Đã xóa vật thể tại: ", snap_pos)
+			
+		queue_redraw() # Gọi _draw() vẽ lại màn hình
+
+func _place_item(snap_pos: Vector2) -> void:
+	var dict_pos = {"x": snap_pos.x, "y": snap_pos.y}
+	match current_tool:
+		"base": map_data["bases"].append(dict_pos)
+		"spawn": map_data["spawns"].append(dict_pos)
+		"obstacle": map_data["obstacles"].append(dict_pos)
+		"gold", "wood": map_data["resources"].append({"type": current_tool, "x": snap_pos.x, "y": snap_pos.y})
+		
+	print("✅ [MAP EDITOR] Đã đặt [", current_tool, "] tại ", snap_pos)
+
+func _remove_item_at(snap_pos: Vector2) -> void:
+	var dict_pos = {"x": snap_pos.x, "y": snap_pos.y}
+	map_data["bases"].erase(dict_pos)
+	map_data["spawns"].erase(dict_pos)
+	map_data["obstacles"].erase(dict_pos)
+	
+	# Xóa mảng phức hợp (tài nguyên)
+	for i in range(map_data["resources"].size() - 1, -1, -1):
+		var r = map_data["resources"][i]
+		if r["x"] == snap_pos.x and r["y"] == snap_pos.y:
+			map_data["resources"].remove_at(i)
+
+# Chỉ dùng các khối màu tượng trưng để thiết kế cho cực nhẹ, không sinh Scene tốn CPU
+func _draw() -> void:
+	# Vẽ lưới nền mờ
+	var half_w = map_data["map_width"] / 2
+	var half_h = map_data["map_height"] / 2
+	for x in range(int(-half_w/grid_size), int(half_w/grid_size) + 1):
+		draw_line(Vector2(x * grid_size, -half_h), Vector2(x * grid_size, half_h), Color(1, 1, 1, 0.1))
+	for y in range(int(-half_h/grid_size), int(half_h/grid_size) + 1):
+		draw_line(Vector2(-half_w, y * grid_size), Vector2(half_w, y * grid_size), Color(1, 1, 1, 0.1))
+		
+	var hs = grid_size / 2.0
+	for b in map_data["bases"]:
+		draw_rect(Rect2(b.x - hs, b.y - hs, grid_size, grid_size), Color.CYAN)
+	for s in map_data["spawns"]:
+		draw_rect(Rect2(s.x - hs, s.y - hs, grid_size, grid_size), Color.MAGENTA)
+	for o in map_data["obstacles"]:
+		draw_rect(Rect2(o.x - hs, o.y - hs, grid_size, grid_size), Color.GRAY)
+	for r in map_data["resources"]:
+		var c = Color.YELLOW if r.type == "gold" else Color.DARK_GREEN
+		draw_rect(Rect2(r.x - hs, r.y - hs, grid_size, grid_size), c)

@@ -16,7 +16,7 @@ extends CanvasLayer
 @onready var tower_menu: VBoxContainer = $BottomPanel/MainHBox/ContextVBox/TowerMenu
 @onready var hero_menu: VBoxContainer = $BottomPanel/MainHBox/ContextVBox/HeroMenu
 
-# Nút chức năng trong Menu Ngữ cảnh
+# Các nút
 @onready var btn_wall: Button = default_menu.get_node("BuildHBox/BtnWall")
 @onready var btn_tower: Button = default_menu.get_node("BuildHBox/BtnTower")
 @onready var btn_trap: Button = default_menu.get_node("BuildHBox/BtnTrap")
@@ -27,8 +27,7 @@ func _ready() -> void:
 	add_to_group("unified_ui")
 	_adjust_panel_position()
 	
-	# Mặc định mở Menu Xây Dựng
-	switch_context("default")
+	switch_context("default") # Khởi động ở Menu Xây Dựng mặc định
 	
 	# Kết nối sự kiện nút bấm
 	toggle_btn.pressed.connect(_on_toggle_pressed)
@@ -38,16 +37,40 @@ func _ready() -> void:
 	buy_worker_btn.pressed.connect(_on_buy_worker_pressed)
 	
 	Global.log_event.connect(_on_new_log)
-
-# BẢN VÁ UI: Chuyển đổi linh hoạt giữa các bảng Menu
+	
+	# BẢN VÁ TÀI NGUYÊN: Tự động kết nối tới Nhà Chính để nhận cập nhật Vàng/Gỗ
+	call_deferred("_connect_to_main_base")
 func switch_context(context_name: String) -> void:
-	print("🎛️ [UI] Chuyển đổi Menu sang ngữ cảnh: ", context_name)
-	default_menu.visible = (context_name == "default")
-	base_menu.visible = (context_name == "base")
-	tower_menu.visible = (context_name == "tower")
-	hero_menu.visible = (context_name == "hero")
-
+	print("🎛️ [UI HỢP NHẤT] Chuyển đổi Menu sang ngữ cảnh: ", context_name)
+	if default_menu: default_menu.visible = (context_name == "default")
+	if base_menu: base_menu.visible = (context_name == "base")
+	if tower_menu: tower_menu.visible = (context_name == "tower")
+	if hero_menu: hero_menu.visible = (context_name == "hero")
+	
+func update_buy_queue(queue_count: int) -> void:
+	if buy_worker_btn:
+		buy_worker_btn.text = "Mua Kiến (10 Vàng) - Hàng chờ: " + str(queue_count)
+		
 func _adjust_panel_position() -> void:
+	# BẢN VÁ UI: Nếu màn hình bị co, gọi Deferred để lấy đúng kích thước thật
+	call_deferred("_do_adjust_position")
+
+func _connect_to_main_base() -> void:
+	var bases = get_tree().get_nodes_in_group("main_base")
+	if bases.size() > 0:
+		var base_node = bases[0]
+		if not base_node.gold_changed.is_connected(update_gold):
+			base_node.gold_changed.connect(update_gold)
+		if not base_node.wood_changed.is_connected(update_wood):
+			base_node.wood_changed.connect(update_wood)
+			
+		# Lấy giá trị ban đầu gán thẳng lên UI góc trên trái
+		if "gold_storage" in base_node: update_gold(base_node.gold_storage)
+		if "wood_storage" in base_node: update_wood(base_node.wood_storage)
+		if "current_hp" in base_node: update_base_hp(base_node.current_hp, Global.base_hp)
+		print("🔗 [UI HỢP NHẤT] Đã kết nối tín hiệu Vàng/Gỗ với Nhà Chính thành công!")
+		
+func _do_adjust_position() -> void:
 	var screen_height = get_viewport().get_visible_rect().size.y
 	if bottom_panel:
 		bottom_panel.global_position.y = screen_height - bottom_panel.size.y
@@ -57,24 +80,17 @@ func _on_toggle_pressed() -> void:
 	bottom_panel.visible = !bottom_panel.visible
 	toggle_btn.text = "Mở Giao Diện" if not bottom_panel.visible else "Ẩn Giao Diện"
 
-# THÊM TOÀN BỘ KHỐI NÀY VÀO CUỐI FILE unified_ui.gd
-
-# --- THAO TÁC XÂY DỰNG & MUA KIẾN ---
 func _select_build(type: String) -> void:
 	var grid = get_tree().get_nodes_in_group("grid_manager")
 	if grid.size() > 0 and grid[0].has_method("select_building_type"):
 		grid[0].select_building_type(type)
-		# BẰNG CHỨNG LOG: Xác nhận UI đã phát lệnh xây
-		print("🧰 [UI HỢP NHẤT] Đã truyền lệnh XÂY DỰNG loại: ", type)
+		print("🧰 [UI] Đã phát lệnh xây: ", type)
 
 func _on_buy_worker_pressed() -> void:
 	var bases = get_tree().get_nodes_in_group("main_base")
 	if bases.size() > 0 and bases[0].has_method("_on_buy_pressed"):
 		bases[0]._on_buy_pressed()
-		# BẰNG CHỨNG LOG: Xác nhận UI đã phát lệnh mua
-		print("🧰 [UI HỢP NHẤT] Đã truyền lệnh MUA KIẾN tới Nhà Chính")
 
-# --- HÀM CẬP NHẬT CHỈ SỐ HUD ---
 func update_gold(amount: int) -> void:
 	if gold_label: gold_label.text = "Vàng: " + str(amount)
 
@@ -84,11 +100,8 @@ func update_wood(amount: int) -> void:
 func update_base_hp(current_hp: float, max_hp: float) -> void:
 	if hp_label: hp_label.text = "HP Căn Cứ: " + str(int(current_hp)) + "/" + str(int(max_hp))
 
-func update_buy_queue(queue_count: int) -> void:
-	if buy_worker_btn:
-		buy_worker_btn.text = "Mua Kiến (10 Vàng) - Hàng chờ: " + str(queue_count)
 
-# --- HIỂN THỊ LOG BBCODE ---
+
 func _on_new_log(type: String, msg: String) -> void:
 	var color_code = "white"
 	match type:
@@ -100,5 +113,3 @@ func _on_new_log(type: String, msg: String) -> void:
 	if log_text:
 		log_text.text += "\n[color=" + color_code + "]" + msg + "[/color]"
 		log_text.scroll_to_line(log_text.get_line_count() - 1)
-		
-	print("📺 [GIAO DIỆN LOG] Đã in: ", msg)
